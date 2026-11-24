@@ -8,6 +8,7 @@ import SEOHead from '@/components/SEOHead';
 import JsonLd from '@/components/JsonLd';
 import { trackCTAClick, trackInternalLinkClick } from '@/lib/tracking';
 import FitnessHomeHero from '@/components/FitnessHomeHero';
+import { VisualProgramPreview } from '@/components/FitnessGraphics';
 import { usefulResources } from '@/lib/fitness-resources';
 import nutritionImg from '@/assets/nutrition-hero.jpg';
 import cardioImg from '@/assets/cardio-hero.jpg';
@@ -85,6 +86,7 @@ const Index = () => {
 
       <main className="flex-1">
         <FitnessHomeHero />
+        <VisualProgramPreview />
 
         {/* Features */}
         <section id="features" className="py-20 md:py-28">

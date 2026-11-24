@@ -87,6 +87,10 @@ export function buildPlanPDF(plan:PlanResults,inputs:UserInputs,logoData?:string
  b.table(['Profile','Your selection'],[63,115],[['Goal',plan.goalLabel],['Age / body weight / height',inputs.age+' years / '+inputs.weightKg+' kg / '+inputs.heightCm+' cm'],['Training setup',equipmentLabel(inputs.equipmentAccess)+' / '+(inputs.sessionMinutes??45)+' min / '+weeks[0].strengthCount+' strength days'],['Diet preference',dietLabel(inputs.dietStyle)],['Current daily steps',fmt(inputs.stepCount)+' (reported activity, not a compulsory target)']],10);
  b.sub('Your eight-week roadmap');
  b.table(['Weeks','Phase','How to progress'],[22,37,119],plan.trainingPlan.map(p=>[p.weekRange.replace('Weeks ',''),p.phase,p.volumeChange??'']),10);
+ b.sub('Eight-week training volume');
+ const setTotals=weeks.map(w=>w.days.reduce((n,day)=>n+(day.strength?.exercises.reduce((s,e)=>s+e.sets,0)??0),0));
+ b.ensure(40);const chartY=b.y,maxSets=Math.max(1,...setTotals),barW=14,gap=7;
+ setTotals.forEach((n,i)=>{const x=M+6+i*(barW+gap),h=22*n/maxSets;b.rect(x,chartY+24-h,barW,h,i>=6?[143,191,174]:i>=4?lime:[127,178,102]);b.text(String(n),x+barW/2,chartY+21-h,8,true,green,'center');b.text('W'+(i+1),x+barW/2,chartY+30,8,false,muted,'center');});b.y+=37;b.para('Planned working sets by week. This chart is not a prediction of muscle or strength gains.',9,muted,3);
  b.sub('How to use this workbook');b.para('Use the weekly calendars to know when to train and recover. Use the workout pages for prescribed sets and your own reps/load notes. Repeat the example meal rotation or substitute foods. Record weekly energy, sleep and training consistency.');
  b.callout('IMPORTANT SAFETY LIMIT','Adults with medical restrictions, pregnancy, an eating disorder, new symptoms, or injuries need individualized advice. Seek urgent help for severe symptoms. If a movement causes sharp pain, stop; do not train through it.');
  // nutrition

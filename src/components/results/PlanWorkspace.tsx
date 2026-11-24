@@ -6,6 +6,7 @@ import { trainingMinutes, weekdays } from '@/lib/training-engine';
 import { getProgramWeek } from '@/lib/program-guide';
 import { emptyJournal, isRemembered, loadJournal, rememberPlan, storeJournal, type Journal, type SetEntry, type CheckIn } from '@/lib/plan-storage';
 import './coach.css';
+import {MovementBadge,PhotoBanner,TrainingVolume} from '@/components/FitnessGraphics';
 
 const defaultSet: SetEntry = {count:0,reps:'',load:''};
 const defaultReview: CheckIn = {energy:'okay',sleep:'',note:''};
@@ -101,7 +102,7 @@ export default function PlanWorkspace({plan,inputs,view='training',week,setWeek,
       <div className="coach-exercises">{session.exercises.map((ex,i)=>{
         const entry=journal.sets[keyFor(i)]??defaultSet, count=Math.min(ex.sets,Number(entry.count)||0);
         return <article key={keyFor(i)} className={'coach-exercise'+(count>=ex.sets?' coach-exercise-complete':'')}>
-          <div className="coach-ex-title"><span className="coach-number">{String(i+1).padStart(2,'0')}</span><div><h4>{ex.name}</h4><p>{ex.sets} sets × {ex.reps} · RPE {ex.rpe} · {ex.rest} rest</p></div>{count>=ex.sets&&<Check size={19}/>}</div>
+          <div className="coach-ex-title"><MovementBadge name={ex.name}/><span className="coach-number">{String(i+1).padStart(2,'0')}</span><div><h4>{ex.name}</h4><p>{ex.sets} sets × {ex.reps} · RPE {ex.rpe} · {ex.rest} rest</p></div>{count>=ex.sets&&<Check size={19}/>}</div>
           <details><summary>Technique & alternative <ChevronDown size={15}/></summary><p>{ex.notes}</p>{ex.alternative&&<p><strong>Swap:</strong> {ex.alternative} if more comfortable; match effort, not weight.</p>}</details>
           <div className="coach-set-row">
             <div className="coach-set-buttons" aria-label={'Completed sets for '+ex.name}>{Array.from({length:ex.sets},(_,j)=><button key={j} aria-label={'Set '+(j+1)+' of '+ex.name} aria-pressed={j<count} onClick={()=>{updateSet(i,{count:j===count-1?j:j+1});if(j>=count)timer.start(Number.parseInt(ex.rest??'90',10));}}>{j<count?<Check size={16}/>:j+1}</button>)}</div>
@@ -113,7 +114,7 @@ export default function PlanWorkspace({plan,inputs,view='training',week,setWeek,
       <div className="coach-instruction"><HeartPulse size={19}/><div><strong>Cool-down · easy movement</strong><p>Take a few minutes to recover. If all sets felt controlled for two sessions, add reps within the range, then the smallest available load. Do not force progression when recovery is poor.</p></div></div>
       <button className="coach-primary" disabled={!allDone&&!journal.completed[sessionId]} onClick={()=>setJournal(prev=>({...prev,completed:{...prev.completed,[sessionId]:!prev.completed[sessionId]}}))}>{journal.completed[sessionId]?'Undo session completion':allDone?'Mark workout complete':'Log all prescribed sets to complete'} {journal.completed[sessionId]?<Check size={18}/>:<ArrowRight size={18}/>}</button>
     </div>
-    <div className="coach-section" hidden={view!=='recovery'}>
+    <div className="coach-section" hidden={view!=='recovery'}><PhotoBanner kind="recovery" title="Recovery builds consistency." subtitle="Log activity, check your energy and give yourself time to adapt."/>
       <div className="coach-heading"><div><p className="coach-kicker">02 / RECOVERY & CARDIO</p><h3>Make the rest of the week count.</h3></div><HeartPulse aria-hidden="true"/></div>
       <div className="coach-weeks" aria-label="Select recovery week">{Array.from({length:8},(_,i)=><button key={i} aria-pressed={week===i+1} onClick={()=>selectWeek(i+1)}>W{i+1}</button>)}</div>
       <p className="coach-muted">Week {week} · {schedule.cardioMinutes} planned aerobic minutes. Log actual minutes; walking counts.</p>
@@ -124,7 +125,7 @@ export default function PlanWorkspace({plan,inputs,view='training',week,setWeek,
       <label className="coach-notes">What went well? What needs changing?<textarea maxLength={500} value={review.note} placeholder="Optional private note" onChange={e=>changeReview({note:e.target.value})}/></label>
       <p className="coach-advice" aria-live="polite">{review.energy==='low'||(review.sleep!==''&&Number(review.sleep)<6)?'Recovery first: keep intensity easy, consider reducing sets or taking a rest day. If fatigue persists, seek professional advice before changing calorie intake.':weeklyCompleted<phase.days.length?'Focus on the next manageable session. Do not try to cram missed sessions into one day.':'You completed the scheduled sessions. Review technique, recovery and consistency before adding load.'}</p>
     </div>
-    <div className="coach-section coach-privacy" hidden={view!=='progress'}>
+    <div className="coach-section coach-privacy" hidden={view!=='progress'}><TrainingVolume plan={plan} inputs={inputs} journal={journal} week={week} onWeek={setWeek}/>
       <div className="coach-heading"><div><p className="coach-kicker">PROGRAM PROGRESS</p><h3>Your training journal</h3></div><Activity/></div><div className="coach-metrics" style={{display:'grid'}}><div><span>Strength sessions</span><strong>{completedCount}/{total}</strong></div><div><span>Cardio logged</span><strong>{Object.values(journal.cardio??{}).reduce((s,n)=>s+Number(n),0)} min</strong></div><div><span>Habits checked</span><strong>{Object.values(journal.habits??{}).filter(Boolean).length}</strong></div></div><div className="coach-two">{Array.from({length:8},(_,i)=>{const w=getProgramWeek(plan,inputs,i+1);return <article key={i}><h4>Week {i+1} · {w.phase}</h4><p>{w.days.filter(d=>d.strength&&journal.completed[(i+1)+':'+d.day]).length} / {w.strengthCount} strength sessions</p><p>{w.days.reduce((s,d)=>s+(journal.cardio?.[(i+1)+':'+d.day]??0),0)} aerobic minutes logged</p><p>Energy: {journal.reviews[String(i+1)]?.energy??'Not recorded'}</p></article>;})}</div>
       <div className="coach-heading"><div><p className="coach-kicker">03 / YOUR DATA</p><h3>Keep your progress yours.</h3></div><ShieldCheck aria-hidden="true"/></div>
       <p>Journal entries stay in this browser session unless you choose to remember them on this device. No account or cloud sync. Exports contain your profile and private notes; share only with people you trust.</p>
