@@ -34,7 +34,7 @@ export function storeProfile(p: UserInputs): boolean {
 }
 export type SetEntry = { count: number; reps: string; load: string };
 export type CheckIn = { energy: 'good'|'okay'|'low'; sleep: string; note: string };
-export type Journal = { sets: Record<string,SetEntry>; completed: Record<string,boolean>; reviews: Record<string,CheckIn> };
+export type Journal = { sets: Record<string,SetEntry>; completed: Record<string,boolean>; reviews: Record<string,CheckIn>; cardio?:Record<string,number>; habits?:Record<string,boolean> };
 export const emptyJournal=():Journal=>({sets:{},completed:{},reviews:{}});
 export function loadJournal(p: UserInputs): Journal {
   for (const [storage,key] of [[sessionStorage,JOURNAL],[localStorage,LOCAL_JOURNAL]] as const) {

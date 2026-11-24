@@ -1,11 +1,12 @@
 import {describe,it,expect} from 'vitest';
-import {writeFileSync} from 'node:fs';
+import {writeFileSync,readFileSync} from 'node:fs';
 import {calculatePlan,type UserInputs} from '../lib/calculations';
 import {buildPlanPDF} from '../lib/pdf-generator';
 const inputs:UserInputs={age:35,sex:'male',heightCm:180,weightKg:80,bodyFatPercent:20,goal:'recomp',workoutFrequency:3,stepCount:7000,dietStyle:'standard',equipmentAccess:'gym',runningInterest:false,experience:'beginner',sessionMinutes:45};
 describe('printable workbook',()=>{
  it('generates a complete multi-page PDF with a valid header',()=>{
-   const doc=buildPlanPDF(calculatePlan(inputs),inputs);
+   const logo='data:image/png;base64,'+readFileSync(new URL('../assets/logo.png',import.meta.url)).toString('base64');
+   const doc=buildPlanPDF(calculatePlan(inputs),inputs,logo);
    const bytes=new Uint8Array(doc.output('arraybuffer'));
    expect(String.fromCharCode(...bytes.slice(0,5))).toBe('%PDF-');
    expect(doc.getNumberOfPages()).toBeGreaterThanOrEqual(29);

@@ -1,131 +1,31 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import {useState,useEffect} from 'react';
+import {useNavigate,useLocation,Link} from 'react-router-dom';
+import {LayoutDashboard,Dumbbell,Utensils,HeartPulse,BarChart3,BookOpen} from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import SEOHead from '@/components/SEOHead';
-import ShareDialog from '@/components/results/ShareDialog';
 import PrintButton from '@/components/results/PrintButton';
-import NumbersTab from '@/components/results/NumbersTab';
-import TrainingTab from '@/components/results/TrainingTab';
-import RecoveryTab from '@/components/results/RecoveryTab';
-import ScienceTab from '@/components/results/ScienceTab';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { calculatePlan, getContextualLinks, type UserInputs, type PlanResults } from '@/lib/calculations';
-import { trackResultView } from '@/lib/tracking';
 import PlanWorkspace from '@/components/results/PlanWorkspace';
-import { loadProfile, profileKey } from '@/lib/plan-storage';
-
-const Results = () => {
-  const [plan, setPlan] = useState<PlanResults | null>(null);
-  const [inputs, setInputs] = useState<UserInputs | null>(null);
-  const [checkedHabits, setCheckedHabits] = useState<Set<number>>(new Set());
-  const navigate = useNavigate();
-  const location = useLocation();
-  const isMobile = useIsMobile();
-
-  useEffect(() => {
-    const parsed = loadProfile() ?? location.state?.inputs;
-    if (!parsed) { navigate('/build-my-plan', {replace:true}); return; }
-    try {
-      const calculated=calculatePlan(parsed);
-      setInputs(parsed); setPlan(calculated);
-      trackResultView(parsed.goal);
-    } catch { navigate('/build-my-plan',{replace:true}); }
-  }, [navigate,location.state]);
-
-  const toggleHabit = (i: number) => {
-    setCheckedHabits(prev => {
-      const next = new Set(prev);
-      if (next.has(i)) next.delete(i); else next.add(i);
-      return next;
-    });
-  };
-
-  if (!plan || !inputs) return <main className="container py-16"><p>Opening your plan…</p><Link to="/build-my-plan">Build or reopen a plan</Link></main>;
-
-  const contextLinks = getContextualLinks(inputs);
-  const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-
-  const resultContent = (
-    <>
-      {/* Personalized banner */}
-      <div className="relative overflow-hidden rounded-xl border-l-4 border-l-primary bg-card p-4 md:p-5 mb-6">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold font-['Oswald'] tracking-wider">
-              YOUR 8-WEEK <span className="text-primary">{plan.goalLabel.toUpperCase()}</span> PLAN
-            </h1>
-            <p className="text-xs text-muted-foreground mt-1">
-              {inputs.age}yo {inputs.sex} • {inputs.weightKg}kg • {inputs.bodyFatPercent}% estimated BF • {plan.leanBodyMass}kg estimated LBM • {inputs.equipmentAccess} • {inputs.dietStyle} • Generated {today}
-            </p>
-          </div>
-          <div className="flex gap-2 no-print" data-no-print>
-            <PrintButton plan={plan} inputs={inputs} />
-            <ShareDialog goalLabel={plan.goalLabel} plan={plan} inputs={inputs} />
-          </div>
-        </div>
-      </div>
-
-      <PlanWorkspace key={profileKey(inputs)} plan={plan} inputs={inputs} />
-      <h2 className="text-xl font-semibold mb-4 mt-8">Your complete plan details</h2>
-      {isMobile ? (
-        <Accordion type="single" collapsible defaultValue="numbers" className="space-y-2">
-          <AccordionItem value="numbers" className="stat-card !p-0 overflow-hidden border-border">
-            <AccordionTrigger className="px-4 py-3 hover:no-underline font-['Oswald'] text-sm tracking-wider">YOUR NUMBERS</AccordionTrigger>
-            <AccordionContent className="px-4 pb-4"><NumbersTab plan={plan} inputs={inputs} /></AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="training" className="stat-card !p-0 overflow-hidden border-border">
-            <AccordionTrigger className="px-4 py-3 hover:no-underline font-['Oswald'] text-sm tracking-wider">TRAINING PLAN</AccordionTrigger>
-            <AccordionContent className="px-4 pb-4"><TrainingTab plan={plan} /></AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="recovery" className="stat-card !p-0 overflow-hidden border-border">
-            <AccordionTrigger className="px-4 py-3 hover:no-underline font-['Oswald'] text-sm tracking-wider">CARDIO & RECOVERY</AccordionTrigger>
-            <AccordionContent className="px-4 pb-4"><RecoveryTab plan={plan} checkedHabits={checkedHabits} toggleHabit={toggleHabit} /></AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="science" className="stat-card !p-0 overflow-hidden border-border">
-            <AccordionTrigger className="px-4 py-3 hover:no-underline font-['Oswald'] text-sm tracking-wider">SCIENCE & NEXT STEPS</AccordionTrigger>
-            <AccordionContent className="px-4 pb-4"><ScienceTab plan={plan} inputs={inputs} contextLinks={contextLinks} setInputs={setInputs} setPlan={setPlan} /></AccordionContent>
-          </AccordionItem>
-        </Accordion>
-      ) : (
-        <Tabs defaultValue="numbers" className="w-full">
-          <TabsList className="w-full bg-secondary/30 border border-border/50 h-11 p-1">
-            <TabsTrigger value="numbers" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-['Oswald'] text-xs tracking-wider">NUMBERS</TabsTrigger>
-            <TabsTrigger value="training" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-['Oswald'] text-xs tracking-wider">TRAINING</TabsTrigger>
-            <TabsTrigger value="recovery" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-['Oswald'] text-xs tracking-wider">RECOVERY</TabsTrigger>
-            <TabsTrigger value="science" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-['Oswald'] text-xs tracking-wider">SCIENCE</TabsTrigger>
-          </TabsList>
-          <TabsContent value="numbers" className="mt-4"><NumbersTab plan={plan} inputs={inputs} /></TabsContent>
-          <TabsContent value="training" className="mt-4"><TrainingTab plan={plan} /></TabsContent>
-          <TabsContent value="recovery" className="mt-4"><RecoveryTab plan={plan} checkedHabits={checkedHabits} toggleHabit={toggleHabit} /></TabsContent>
-          <TabsContent value="science" className="mt-4"><ScienceTab plan={plan} inputs={inputs} contextLinks={contextLinks} setInputs={setInputs} setPlan={setPlan} /></TabsContent>
-        </Tabs>
-      )}
-    </>
-  );
-
-  return (
-    <div className="min-h-screen flex flex-col">
-      <SEOHead
-        title="Your private fitness plan | GearUpToFit"
-        description="Your personal fitness plan, training schedule and journal."
-        path="/build-my-plan/results"
-        noindex
-      />
-      <Header />
-
-      <main className="flex-1 py-8 md:py-12">
-        <div className="container max-w-5xl">
-          <motion.div initial={{opacity:0}} animate={{opacity:1}}>{resultContent}</motion.div>
-        </div>
-      </main>
-
-      <Footer />
-    </div>
-  );
-};
-
-export default Results;
+import {ProgramOverview,NutritionStudio,EvidenceStudio} from '@/components/results/ProgramStudio';
+import {calculatePlan,type UserInputs,type PlanResults} from '@/lib/calculations';
+import {loadProfile,profileKey,loadJournal,emptyJournal,type Journal} from '@/lib/plan-storage';
+import {trackResultView} from '@/lib/tracking';
+import logo from '@/assets/logo.png';
+type View='overview'|'training'|'nutrition'|'recovery'|'progress'|'evidence';
+const nav=[{id:'overview',title:'Overview',icon:LayoutDashboard},{id:'training',title:'Workouts',icon:Dumbbell},{id:'nutrition',title:'Nutrition',icon:Utensils},{id:'recovery',title:'Recovery',icon:HeartPulse},{id:'progress',title:'Progress',icon:BarChart3},{id:'evidence',title:'Evidence',icon:BookOpen}] as const;
+export default function Results(){
+ const [plan,setPlan]=useState<PlanResults|null>(null),[inputs,setInputs]=useState<UserInputs|null>(null),[view,setView]=useState<View>('overview'),[week,setWeek]=useState(1),[journal,setJournal]=useState<Journal>(emptyJournal);
+ const navigate=useNavigate(),location=useLocation();
+ useEffect(()=>{const p=location.state?.inputs??loadProfile();if(!p){navigate('/build-my-plan',{replace:true});return;}try{setPlan(calculatePlan(p));setInputs(p);setJournal(loadJournal(p));trackResultView(p.goal);}catch{navigate('/build-my-plan',{replace:true});}},[navigate,location.state]);
+ const change=(v:View)=>{setView(v);if(inputs)setJournal(loadJournal(inputs));};
+ if(!plan||!inputs)return <main className="container py-12"><p>Opening your plan...</p><Link to="/build-my-plan">Build or reopen a plan</Link></main>;
+ const coachView=view==='recovery'?'recovery':view==='progress'?'progress':'training';
+ return <div className="min-h-screen flex flex-col"><SEOHead title="Your private fitness plan | GearUpToFit" description="Your personal workout, nutrition and recovery program." path="/build-my-plan/results" noindex/><Header/><main className="flex-1"><div className="studio">
+  <header className="studio-header"><div><div className="studio-brand"><img src={logo} alt="GearUpToFit" width={36} height={36}/><span className="studio-eyebrow">YOUR PERSONAL FITNESS OS</span></div><h1>{plan.goalLabel}<br/>Your 8-week program.</h1><p>{inputs.workoutFrequency} strength days/week · {inputs.sessionMinutes??45} min per strength session · {inputs.equipmentAccess==='gym'?'Gym':inputs.equipmentAccess==='home'?'Home gym':'Bodyweight'} · {inputs.experience==='experienced'?'Experienced':'Beginner / returning'}</p></div><div className="studio-header-actions"><PrintButton plan={plan} inputs={inputs}/><Link to="/build-my-plan">Edit plan preferences</Link></div></header>
+  <div className="studio-shell"><nav className="studio-nav" aria-label="Fitness program sections">{nav.map(n=><button key={n.id} aria-current={view===n.id?'page':undefined} onClick={()=>change(n.id)}><n.icon/>{n.title}</button>)}</nav><div className="studio-content">
+   {view==='overview'&&<ProgramOverview plan={plan} inputs={inputs} week={week} setWeek={setWeek} journal={journal} openTraining={()=>change('training')} openRecovery={()=>change('recovery')}/>}
+   {view==='nutrition'&&<NutritionStudio plan={plan} inputs={inputs}/>}
+   {view==='evidence'&&<EvidenceStudio plan={plan} inputs={inputs}/>}
+   <div hidden={!['training','recovery','progress'].includes(view)}><PlanWorkspace key={profileKey(inputs)} plan={plan} inputs={inputs} view={coachView} week={week} setWeek={setWeek} onJournalChange={setJournal}/></div>
+  </div></div></div></main><Footer/></div>;
+}

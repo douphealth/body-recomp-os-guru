@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Activity, ArrowRight, CalendarDays, Check, ChevronDown, Clock3, Dumbbell, Download, Flame, HeartPulse, ShieldCheck, Timer, Utensils } from 'lucide-react';
 import type { PlanResults, UserInputs } from '@/lib/calculations';
 import { trainingMinutes, weekdays } from '@/lib/training-engine';
+import { getProgramWeek } from '@/lib/program-guide';
 import { emptyJournal, isRemembered, loadJournal, rememberPlan, storeJournal, type Journal, type SetEntry, type CheckIn } from '@/lib/plan-storage';
 import './coach.css';
 
@@ -26,15 +27,15 @@ function useRestTimer(){
   return {seconds, active:deadline!==null,start:(n:number)=>{setSeconds(n);setDeadline(Date.now()+n*1000);},stop:()=>{setDeadline(null);setSeconds(0);}};
 }
 
-export default function PlanWorkspace({plan,inputs}:{plan:PlanResults;inputs:UserInputs}){
+export default function PlanWorkspace({plan,inputs,view='training',week,setWeek,onJournalChange}:{plan:PlanResults;inputs:UserInputs;view?:'training'|'recovery'|'progress';week:number;setWeek:(w:number)=>void;onJournalChange?:(j:Journal)=>void}){
   const [journal,setJournal]=useState<Journal>(()=>loadJournal(inputs));
   const [remember,setRemember]=useState(()=>isRemembered(inputs));
   const [storageError,setStorageError]=useState(false);
-  const [week,setWeek]=useState(1);
   const [dayIndex,setDayIndex]=useState(0);
   const [confirmReset,setConfirmReset]=useState(false);
   const timer=useRestTimer();
   const phase=plan.trainingPlan[Math.floor((week-1)/2)];
+  const schedule=getProgramWeek(plan,inputs,week);
   const session=phase.days[dayIndex] ?? phase.days[0];
   const sessionId=week+':'+session.day;
   const keyFor=(i:number)=>sessionId+':'+i;
@@ -45,7 +46,8 @@ export default function PlanWorkspace({plan,inputs}:{plan:PlanResults;inputs:Use
   const doneSets=session.exercises.reduce((n,e,i)=>n+Math.min(e.sets,Math.max(0,Number(journal.sets[keyFor(i)]?.count)||0)),0);
   const review=journal.reviews[String(week)]??defaultReview;
 
-  useEffect(()=>{setStorageError(!storeJournal(inputs,journal,remember));},[inputs,journal,remember]);
+  useEffect(()=>{setStorageError(!storeJournal(inputs,journal,remember));onJournalChange?.(journal);},[inputs,journal,remember,onJournalChange]);
+  useEffect(()=>{setDayIndex(0);},[week]);
   const selectWeek=(w:number)=>{setWeek(w);setDayIndex(0);timer.stop();};
   const updateSet=(index:number,patch:Partial<SetEntry>)=>{
     const key=keyFor(index),target=session.exercises[index].sets;
@@ -84,13 +86,13 @@ export default function PlanWorkspace({plan,inputs}:{plan:PlanResults;inputs:Use
       <div><Utensils/><span>Protein</span><strong>{plan.proteinGrams} <small>g</small></strong><p>{plan.carbGrams}g carbs · {plan.fatGrams}g fat</p></div>
       <div><Dumbbell/><span>This week</span><strong>{weeklyCompleted}/{phase.days.length} <small>done</small></strong><p>{phase.phase} · consistent effort</p></div>
     </div>
-    <div className="coach-section">
+    <div className="coach-section" hidden={view!=='training'}>
       <div className="coach-heading"><div><p className="coach-kicker">01 / TRAINING</p><h3>Your weekly plan</h3></div><CalendarDays aria-hidden="true"/></div>
       <div className="coach-weeks" aria-label="Select program week">{Array.from({length:8},(_,i)=><button type="button" key={i} aria-pressed={week===i+1} onClick={()=>selectWeek(i+1)}><small>W</small>{i+1}</button>)}</div>
       <p className="coach-muted">{phase.phase} — {phase.volumeChange}</p>
       <div className="coach-calendar" aria-label="Weekly training schedule">{weekdays.map((day)=>{
         const index=phase.days.findIndex(d=>d.day===day),isTraining=index!==-1,done=!!journal.completed[week+':'+day];
-        return <button type="button" key={day} disabled={!isTraining} aria-pressed={isTraining&&session.day===day} onClick={()=>{setDayIndex(index);timer.stop();}} className={done?'coach-done':''}><small>{day.slice(0,3)}</small><span>{done?<Check size={17}/>:isTraining?<Dumbbell size={17}/>:<HeartPulse size={17}/>}</span><span>{isTraining?phase.days[index].focus:'Recovery'}</span></button>;
+        return <button type="button" key={day} disabled={!isTraining} aria-pressed={isTraining&&session.day===day} onClick={()=>{setDayIndex(index);timer.stop();}} className={done?'coach-done':''}><small>{day.slice(0,3)}</small><span>{done?<Check size={17}/>:isTraining?<Dumbbell size={17}/>:<HeartPulse size={17}/>}</span><span>{isTraining?phase.days[index].focus:schedule.days.find(d=>d.day===day)?.cardioMinutes?'Aerobic':'Recovery'}</span></button>;
       })}</div>
       <div className="coach-session-head"><div><p className="coach-kicker">WEEK {week} / {session.day.toUpperCase()}</p><h3>{session.focus}</h3><p className="coach-muted">{session.exercises.length} movements · {totalSets} working sets · approx. {minutes} min</p></div><div className="coach-count">{doneSets}/{totalSets}<small>SETS</small></div></div>
       <progress aria-label="Sets completed in selected workout" value={doneSets} max={totalSets}/>
@@ -111,15 +113,19 @@ export default function PlanWorkspace({plan,inputs}:{plan:PlanResults;inputs:Use
       <div className="coach-instruction"><HeartPulse size={19}/><div><strong>Cool-down · easy movement</strong><p>Take a few minutes to recover. If all sets felt controlled for two sessions, add reps within the range, then the smallest available load. Do not force progression when recovery is poor.</p></div></div>
       <button className="coach-primary" disabled={!allDone&&!journal.completed[sessionId]} onClick={()=>setJournal(prev=>({...prev,completed:{...prev.completed,[sessionId]:!prev.completed[sessionId]}}))}>{journal.completed[sessionId]?'Undo session completion':allDone?'Mark workout complete':'Log all prescribed sets to complete'} {journal.completed[sessionId]?<Check size={18}/>:<ArrowRight size={18}/>}</button>
     </div>
-    <div className="coach-section">
-      <div className="coach-heading"><div><p className="coach-kicker">02 / RECOVERY & NUTRITION</p><h3>Make the rest of the week count.</h3></div><HeartPulse aria-hidden="true"/></div>
-      <div className="coach-two"><article><h4>Aerobic activity</h4><p>{plan.cardioPlan.sessionsPerWeek} sessions · {plan.cardioPlan.duration}</p><p>{plan.cardioPlan.intensity}</p><p>{plan.cardioPlan.notes}</p>{plan.cardioPlan.runningPlan&&<p>{plan.cardioPlan.runningPlan}</p>}</article><article><h4>Daily nutrition</h4><p>Use the detailed nutrition tab for meal ideas and exact macro allocations. Targets are starting estimates.</p><p>Choose protein-rich foods, vegetables or fruit, carbohydrate sources and unsaturated fats as appropriate to your preferences. Adjust portions using food labels.</p><p>Regular sleep, fluids according to thirst and activity, and manageable movement are more important than perfect adherence.</p></article></div>
+    <div className="coach-section" hidden={view!=='recovery'}>
+      <div className="coach-heading"><div><p className="coach-kicker">02 / RECOVERY & CARDIO</p><h3>Make the rest of the week count.</h3></div><HeartPulse aria-hidden="true"/></div>
+      <div className="coach-weeks" aria-label="Select recovery week">{Array.from({length:8},(_,i)=><button key={i} aria-pressed={week===i+1} onClick={()=>selectWeek(i+1)}>W{i+1}</button>)}</div>
+      <p className="coach-muted">Week {week} · {schedule.cardioMinutes} planned aerobic minutes. Log actual minutes; walking counts.</p>
+      <div className="coach-two">{schedule.days.map(d=><article key={d.day}><h4>{d.day}</h4><p>{d.cardioMinutes?d.cardioMinutes+' min planned · '+d.cardio:d.recovery}</p><label className="coach-notes">Actual aerobic minutes<input type="number" min="0" max="300" value={journal.cardio?.[week+':'+d.day]??''} onChange={e=>{const n=Math.max(0,Math.min(300,Number(e.target.value)||0));setJournal(prev=>({...prev,cardio:{...prev.cardio,[week+':'+d.day]:n}}));}}/></label></article>)}</div>
+      <h4 className="coach-check-title">Week {week} habits</h4><div className="coach-two">{schedule.habit.map((h,i)=><label key={h} className="studio-secondary" style={{justifyContent:'flex-start'}}><input style={{width:18,minHeight:18,accentColor:'#c5ef81'}} type="checkbox" checked={!!journal.habits?.[week+':'+i]} onChange={e=>setJournal(prev=>({...prev,habits:{...prev.habits,[week+':'+i]:e.target.checked}}))}/>{h}</label>)}</div>
       <h4 className="coach-check-title">Week {week} check-in</h4>
       <div className="coach-logfields"><label>Energy<select value={review.energy} onChange={e=>changeReview({energy:e.target.value as CheckIn['energy']})}><option value="good">Good</option><option value="okay">Manageable</option><option value="low">Low / unusually tired</option></select></label><label>Average sleep (hours)<input type="number" min="0" max="24" step=".5" value={review.sleep} onChange={e=>changeReview({sleep:e.target.value})}/></label></div>
       <label className="coach-notes">What went well? What needs changing?<textarea maxLength={500} value={review.note} placeholder="Optional private note" onChange={e=>changeReview({note:e.target.value})}/></label>
       <p className="coach-advice" aria-live="polite">{review.energy==='low'||(review.sleep!==''&&Number(review.sleep)<6)?'Recovery first: keep intensity easy, consider reducing sets or taking a rest day. If fatigue persists, seek professional advice before changing calorie intake.':weeklyCompleted<phase.days.length?'Focus on the next manageable session. Do not try to cram missed sessions into one day.':'You completed the scheduled sessions. Review technique, recovery and consistency before adding load.'}</p>
     </div>
-    <div className="coach-section coach-privacy">
+    <div className="coach-section coach-privacy" hidden={view!=='progress'}>
+      <div className="coach-heading"><div><p className="coach-kicker">PROGRAM PROGRESS</p><h3>Your training journal</h3></div><Activity/></div><div className="coach-metrics" style={{display:'grid'}}><div><span>Strength sessions</span><strong>{completedCount}/{total}</strong></div><div><span>Cardio logged</span><strong>{Object.values(journal.cardio??{}).reduce((s,n)=>s+Number(n),0)} min</strong></div><div><span>Habits checked</span><strong>{Object.values(journal.habits??{}).filter(Boolean).length}</strong></div></div><div className="coach-two">{Array.from({length:8},(_,i)=>{const w=getProgramWeek(plan,inputs,i+1);return <article key={i}><h4>Week {i+1} · {w.phase}</h4><p>{w.days.filter(d=>d.strength&&journal.completed[(i+1)+':'+d.day]).length} / {w.strengthCount} strength sessions</p><p>{w.days.reduce((s,d)=>s+(journal.cardio?.[(i+1)+':'+d.day]??0),0)} aerobic minutes logged</p><p>Energy: {journal.reviews[String(i+1)]?.energy??'Not recorded'}</p></article>;})}</div>
       <div className="coach-heading"><div><p className="coach-kicker">03 / YOUR DATA</p><h3>Keep your progress yours.</h3></div><ShieldCheck aria-hidden="true"/></div>
       <p>Journal entries stay in this browser session unless you choose to remember them on this device. No account or cloud sync. Exports contain your profile and private notes; share only with people you trust.</p>
       <div className="coach-actions"><button className="coach-outline" aria-pressed={remember} onClick={toggleRemember}>{remember?'Forget saved plan on this device':'Remember plan on this device'}</button><button className="coach-outline" onClick={exportJournal}><Download size={15}/> Export journal</button><button className="coach-outline" onClick={()=>setConfirmReset(!confirmReset)}>Reset journal</button></div>

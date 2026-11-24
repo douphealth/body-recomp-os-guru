@@ -8,6 +8,7 @@ import SEOHead from '@/components/SEOHead';
 import JsonLd from '@/components/JsonLd';
 import { trackCTAClick, trackInternalLinkClick } from '@/lib/tracking';
 import FitnessHomeHero from '@/components/FitnessHomeHero';
+import { usefulResources } from '@/lib/fitness-resources';
 import nutritionImg from '@/assets/nutrition-hero.jpg';
 import cardioImg from '@/assets/cardio-hero.jpg';
 
@@ -343,6 +344,12 @@ const Index = () => {
           </div>
         </section>
 
+        <section className="container py-16" aria-labelledby="fitness-answer"><div className="max-w-4xl mx-auto space-y-7">
+          <h2 id="fitness-answer" className="text-3xl font-bold">How does the free fitness plan work?</h2>
+          <p className="text-base leading-relaxed text-muted-foreground">GearUpToFit Fitness Plan OS builds an eight-week program for healthy adults using your training experience, equipment, available time and goals. It includes scheduled strength and aerobic activity, a seven-day example menu, a grocery list, workout logging, recovery check-ins and a downloadable PDF workbook. Energy and food values are estimates, not medical prescriptions.</p>
+          <div className="grid sm:grid-cols-2 gap-4">{[['Can I train at home?','Yes. Choose home gym or minimal equipment for suitable exercises and alternatives.'],['How many days should I train?','Select two to six strength days. The planner distributes sessions across the week and reserves recovery time. Beginners should start with manageable sessions.'],['Is the meal plan exact?','No. Food quantities use rounded typical estimates and show differences from your nutritional targets. Use actual food labels and account for allergies and medical needs.'],['Is my plan private?','No sign-up is required. Your journal stays in the browser unless you choose device-local saving; PDF downloads contain private profile information.']].map(([q,a])=><details key={q} className="stat-card"><summary className="font-semibold cursor-pointer">{q}</summary><p className="text-muted-foreground mt-3 leading-relaxed">{a}</p></details>)}</div>
+          <h2 className="text-2xl font-bold">Useful GearUpToFit guides</h2><div className="grid sm:grid-cols-2 gap-4">{usefulResources().map(resource=><a className="stat-card block" href={resource.url} key={resource.url}><h3 className="text-lg font-semibold">{resource.title}</h3><p className="mt-2 text-sm text-muted-foreground">{resource.description}</p><span className="mt-3 inline-block text-primary font-medium">Read guide ↗</span></a>)}</div>
+          <p className="text-sm text-muted-foreground">Learn how we estimate energy and plan training in our <Link className="text-primary underline" to="/methodology">published methodology</Link>.</p></div></section>
         {/* Final CTA */}
         <section className="py-20 md:py-28 relative overflow-hidden">
           <div className="absolute inset-0 gradient-red-subtle" />

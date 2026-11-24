@@ -24,9 +24,9 @@ const defaultInputs: UserInputs = {
 };
 
 const stepMeta = [
-  { icon: User, title: 'YOUR BODY STATS', desc: 'Tell us about your body composition', color: 'from-red-500/20 to-orange-500/10' },
-  { icon: Target, title: 'GOALS & ACTIVITY', desc: 'What are you working toward?', color: 'from-orange-500/20 to-amber-500/10' },
-  { icon: Settings2, title: 'PREFERENCES', desc: 'Customize your plan to your lifestyle', color: 'from-amber-500/20 to-yellow-500/10' },
+  { icon: User, title: 'YOUR BODY STATS', desc: 'Tell us about your body composition', color: 'from-lime-500/15 to-emerald-500/5' },
+  { icon: Target, title: 'GOALS & ACTIVITY', desc: 'What are you working toward?', color: 'from-lime-500/15 to-emerald-500/5' },
+  { icon: Settings2, title: 'PREFERENCES', desc: 'Customize your plan to your lifestyle', color: 'from-lime-500/15 to-emerald-500/5' },
 ];
 
 const BodyRecompWizard = () => {
@@ -87,7 +87,7 @@ const BodyRecompWizard = () => {
       <Header />
 
       <main className="flex-1 py-8 md:py-16">
-        <div className="container max-w-2xl">
+        <div className="container max-w-3xl"><div className="mb-7"><p className="text-xs font-bold uppercase tracking-widest text-primary mb-3">GEARUPTOFIT / PERSONALIZE YOUR PROGRAM</p><h1 className="text-3xl md:text-5xl font-bold tracking-tight mb-3">Make fitness fit your life.</h1><p className="text-muted-foreground text-base leading-relaxed">Three simple steps to create a realistic eight-week workout, nutrition and recovery program. Your information stays in your browser.</p></div>
           {/* Step indicators */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4">
@@ -177,7 +177,7 @@ const BodyRecompWizard = () => {
                         <div className="flex items-center justify-between mb-2">
                           <Label className="text-xs text-muted-foreground uppercase tracking-wider">Body Fat Estimate</Label>
                           <div className="text-right">
-                            <span className="text-2xl font-bold text-primary font-['Oswald']">{inputs.bodyFatPercent}%</span>
+                            <span className="text-2xl font-bold text-primary font-semibold">{inputs.bodyFatPercent}%</span>
 
                           </div>
                         </div>
@@ -212,7 +212,7 @@ const BodyRecompWizard = () => {
                                 <p className="text-sm font-semibold">{g.label.split(' ').slice(1).join(' ')}</p>
                                 <p className="text-xs text-muted-foreground">{g.desc}</p>
                               </div>
-                              <span className={`text-[10px] font-medium px-2 py-1 rounded-md ${
+                              <span className={`text-xs font-medium px-2 py-1 rounded-md ${
                                 inputs.goal === g.value ? 'bg-primary/20 text-primary' : 'bg-secondary text-muted-foreground'
                               }`}>{g.detail}</span>
                             </label>
@@ -223,10 +223,10 @@ const BodyRecompWizard = () => {
                       <div>
                         <div className="flex items-center justify-between mb-2">
                           <Label className="text-xs text-muted-foreground uppercase tracking-wider">Workout Frequency</Label>
-                          <span className="text-2xl font-bold text-primary font-['Oswald']">{inputs.workoutFrequency}<span className="text-sm text-muted-foreground font-normal ml-1">days/wk</span></span>
+                          <span className="text-2xl font-bold text-primary font-semibold">{inputs.workoutFrequency}<span className="text-sm text-muted-foreground font-normal ml-1">days/wk</span></span>
                         </div>
                         <Slider value={[inputs.workoutFrequency]} onValueChange={([v]) => update('workoutFrequency', v)} min={2} max={6} step={1} className="mt-3" />
-                        <div className="flex justify-between text-[10px] text-muted-foreground mt-2">
+                        <div className="flex justify-between text-xs text-muted-foreground mt-2">
                           <span>2 days</span>
                           <span>{inputs.workoutFrequency <= 3 ? 'Full Body' : inputs.workoutFrequency <= 4 ? 'Upper/Lower' : 'Push/pull/lower'} Split</span>
                           <span>6 days</span>
@@ -338,7 +338,7 @@ const BodyRecompWizard = () => {
                   Next <ArrowRight className="h-4 w-4" />
                 </Button>
               ) : (
-                <Button disabled={!confirmed} onClick={handleGenerate} className="gradient-red border-0 gap-2 font-bold px-8 shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all hover:scale-[1.02]" style={{ animation: 'pulse-glow 3s ease-in-out infinite' }}>
+                <Button disabled={!confirmed} onClick={handleGenerate} className="gradient-red border-0 gap-2 font-bold px-8 shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all hover:scale-[1.02]" >
                   <Dumbbell className="h-4 w-4" /> Generate My Plan
                 </Button>
               )}

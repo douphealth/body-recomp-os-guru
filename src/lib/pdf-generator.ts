@@ -1,4 +1,6 @@
 import jsPDF from 'jspdf';
+import logoUrl from '@/assets/logo.png';
+import { usefulResources } from './fitness-resources';
 import type { PlanResults, UserInputs } from './calculations';
 import { getProgramWeek, getWeekSessionMinutes, progressionRules, effortGuide, referenceLinks } from './program-guide';
 import { trainingMinutes } from './training-engine';
@@ -60,12 +62,13 @@ class Book {
  finish(){const count=this.doc.getNumberOfPages();for(let i=2;i<=count;i++){this.doc.setPage(i);this.rule(281);this.text('PRIVATE PERSONAL WORKBOOK  /  gearuptofit.com',M,287,8,false,muted);this.text(String(i).padStart(2,'0')+' / '+count,194,287,8,true,green,'right');}return this.doc;}
 }
 
-export function buildPlanPDF(plan:PlanResults,inputs:UserInputs):jsPDF{
+export function buildPlanPDF(plan:PlanResults,inputs:UserInputs,logoData?:string):jsPDF{
  const b=new Book(),d=b.doc;
  const menu=getWeeklyMenu(plan,inputs),weeks=Array.from({length:8},(_,i)=>getProgramWeek(plan,inputs,i+1));
  // Cover - no heavy photographic background, sharp vector typography, printer-friendly interiors.
  b.fill(dark);d.rect(0,0,210,H,'F');b.fill(green);d.rect(166,0,44,297,'F');b.fill(lime);d.rect(16,17,11,2,'F');
  b.text('GEARUPTOFIT / PERSONAL FITNESS OS',16,27,11,true,lime);
+ if(logoData){const props=d.getImageProperties(logoData);const ratio=props.width/props.height;const w=Math.min(29,29*ratio),h=w/ratio;b.rect(174,15,30,30,white);d.addImage(logoData,props.fileType,189-w/2,30-h/2,w,h);}
  b.text('YOUR PERSONAL',16,55,11,true,white);
  b.text('8-week',16,76,45,true,white);b.text('fitness',16,94,45,true,white);b.text('workbook.',16,112,45,true,lime);
  const goals=b.lines(plan.goalLabel,142,21,true);goals.forEach((l,i)=>b.text(l,16,130+i*7.8,21,true,white));
@@ -158,6 +161,11 @@ export function buildPlanPDF(plan:PlanResults,inputs:UserInputs):jsPDF{
  plan.scienceNotes.forEach(note=>{b.sub(note.title);b.para(note.explanation,10);b.para(note.citation,8.5,muted);});
  b.sub('Primary references and further reading');
  referenceLinks.forEach(ref=>{const detail=b.lines(ref.detail,W,9);b.ensure(16+detail.length*4);b.text(ref.title,M,b.y+3.5,10,true,green);b.y+=6;b.para(ref.detail,9,muted,1);b.doc.setFont('helvetica','normal');b.doc.setFontSize(8);b.color(green);const url=clean(ref.url);b.doc.textWithLink(url,M,b.y+3,{url:ref.url});b.y+=8;});
- return b.finish();
+ b.page('08 / GearUpToFit resources','Keep learning. Keep moving.','Selected resources from the GearUpToFit website. Educational reading, not a replacement for individualized professional guidance.');
+ usefulResources(inputs).forEach(resource=>{b.ensure(27);b.sub(resource.title);b.para(resource.description,10,muted,2);b.doc.setFont('helvetica','normal');b.doc.setFontSize(8);b.color(green);b.doc.textWithLink(resource.url,M,b.y+3,{url:resource.url});b.y+=10;});
+ b.callout('RETURN TO YOUR FREE PLANNER','Rebuild or reopen your plan at fitness-plan.gearuptofit.com. Your private plan is not included in public links.');
+ const finished=b.finish();
+ if(logoData){const props=finished.getImageProperties(logoData);const ratio=props.width/props.height;const w=Math.min(8,8*ratio),h=w/ratio;for(let i=2;i<=finished.getNumberOfPages();i++){finished.setPage(i);finished.addImage(logoData,props.fileType,3+(8-w)/2,282+(8-h)/2,w,h);}}
+ return finished;
 }
-export async function generatePlanPDF(plan:PlanResults,inputs:UserInputs){const doc=buildPlanPDF(plan,inputs);doc.save('GearUpToFit-8-Week-'+clean(plan.goalLabel).replace(/\s+/g,'-')+'-Workbook.pdf');}
+export async function generatePlanPDF(plan:PlanResults,inputs:UserInputs){const res=await fetch(logoUrl);if(!res.ok)throw new Error('Brand asset unavailable');const blob=await res.blob();const logoData=await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=reject;reader.readAsDataURL(blob);});const doc=buildPlanPDF(plan,inputs,logoData);doc.save('GearUpToFit-8-Week-'+clean(plan.goalLabel).replace(/\s+/g,'-')+'-Workbook.pdf');}
