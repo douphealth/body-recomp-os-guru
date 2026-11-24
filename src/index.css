@@ -1,8 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
 
 @layer base {
   :root {
@@ -22,7 +22,7 @@
     --secondary-foreground: 0 0% 90%;
 
     --muted: 220 15% 16%;
-    --muted-foreground: 220 10% 55%;
+    --muted-foreground: 220 12% 70%;
 
     --accent: 0 85% 55%;
     --accent-foreground: 0 0% 100%;
@@ -62,7 +62,7 @@
     --secondary: 220 15% 16%;
     --secondary-foreground: 0 0% 90%;
     --muted: 220 15% 16%;
-    --muted-foreground: 220 10% 55%;
+    --muted-foreground: 220 12% 70%;
     --accent: 0 85% 55%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84% 60%;
@@ -254,3 +254,5 @@
     page-break-inside: avoid;
   }
 }
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; } }

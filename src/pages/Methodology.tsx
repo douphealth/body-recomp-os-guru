@@ -15,15 +15,15 @@ const Methodology = () => {
     description: 'Learn exactly how we calculate your calorie targets, macro split, and training plan using the Mifflin-St Jeor equation and evidence-based formulas.',
     author: { '@type': 'Organization', name: 'GearUpToFit', url: 'https://gearuptofit.com' },
     publisher: { '@type': 'Organization', name: 'GearUpToFit', url: 'https://gearuptofit.com' },
-    mainEntityOfPage: 'https://app.gearuptofit.com/methodology',
+    mainEntityOfPage: 'https://fitness-plan.gearuptofit.com/methodology',
   };
 
   const faqSchema = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
     mainEntity: [
-      { '@type': 'Question', name: 'What equation does Body Recomp OS use for TDEE?', acceptedAnswer: { '@type': 'Answer', text: 'We use the Mifflin-St Jeor equation (1990), which research shows is the most accurate TDEE predictor for healthy adults within ±10%.' } },
-      { '@type': 'Question', name: 'How is the protein target calculated?', acceptedAnswer: { '@type': 'Answer', text: 'Protein targets are based on lean body mass (LBM), calculated as total weight × (1 - body fat %). We then apply a multiplier of 1.6-2.2g per kg of LBM depending on your goal.' } },
+      { '@type': 'Question', name: 'What equation does Body Recomp OS use for TDEE?', acceptedAnswer: { '@type': 'Answer', text: 'We use the Mifflin-St Jeor equation (1990), which research shows is a resting energy estimate for adults; activity and individual needs remain uncertain.' } },
+      { '@type': 'Question', name: 'How is the protein target calculated?', acceptedAnswer: { '@type': 'Answer', text: 'Protein targets use 1.6–2.0 g/kg body weight, capped by the energy budget.' } },
       { '@type': 'Question', name: 'Is the Mifflin-St Jeor equation accurate?', acceptedAnswer: { '@type': 'Answer', text: 'Yes — a 2005 systematic review by Frankenfield et al. found the Mifflin-St Jeor equation was the most accurate for estimating BMR in both normal-weight and obese individuals, predicting BMR within 10% for 82% of non-obese subjects.' } },
     ],
   };
@@ -32,8 +32,8 @@ const Methodology = () => {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://app.gearuptofit.com/' },
-      { '@type': 'ListItem', position: 2, name: 'Methodology', item: 'https://app.gearuptofit.com/methodology' },
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://fitness-plan.gearuptofit.com/' },
+      { '@type': 'ListItem', position: 2, name: 'Methodology', item: 'https://fitness-plan.gearuptofit.com/methodology' },
     ],
   };
 
@@ -74,7 +74,7 @@ const Methodology = () => {
               <CardContent className="p-5">
                 <p className="text-xs font-bold text-primary uppercase tracking-wider mb-2">Quick Answer</p>
                 <p className="text-sm text-foreground/90 leading-relaxed">
-                  We use the <strong>Mifflin-St Jeor equation (1990)</strong> to calculate your Basal Metabolic Rate (BMR), then multiply by an activity factor based on your workout frequency and daily step count. This method is the most accurate TDEE predictor for healthy adults, validated within ±10% accuracy.
+                  We use the <strong>Mifflin-St Jeor equation (1990)</strong> to calculate your Basal Metabolic Rate (BMR), then multiply by an activity factor based on your workout frequency and daily step count. Activity multipliers are approximate planning heuristics; individual energy needs vary.
                 </p>
               </CardContent>
             </Card>
@@ -112,9 +112,9 @@ const Methodology = () => {
 
               <p><strong>Goal-specific calorie adjustment:</strong></p>
               <ul className="list-disc list-inside space-y-1 ml-2 text-muted-foreground">
-                <li><strong>Fat Loss:</strong> TDEE × 0.80 (20% deficit) — preserves muscle while creating sustainable fat loss</li>
-                <li><strong>Lean Muscle:</strong> TDEE × 1.10 (10% surplus) — minimizes fat gain while supporting muscle growth</li>
-                <li><strong>Recomposition:</strong> Maintenance with cycling (85% on rest days, 110% on training days)</li>
+                <li><strong>Fat Loss:</strong> Approximately 15% below estimated maintenance when appropriate; conservative safeguards apply</li>
+                <li><strong>Lean Muscle:</strong> Approximately 5% above estimated maintenance</li>
+                <li><strong>Recomposition:</strong> Estimated maintenance; reassess recovery and progress</li>
               </ul>
             </div>
           </section>
@@ -129,7 +129,7 @@ const Methodology = () => {
             </div>
 
             <div className="space-y-4 text-sm text-foreground/80 leading-relaxed">
-              <p>Protein targets are calculated from <strong>lean body mass (LBM)</strong>, not total body weight. This is more accurate because adipose tissue has minimal protein requirements.</p>
+              <p>Protein targets are estimated from <strong>total body weight</strong> and capped at 35% of the starting energy budget. Lean mass is an approximate display metric only.</p>
               <p><strong>LBM = Total Weight × (1 − Body Fat %)</strong></p>
 
               <Card className="bg-card border-border">
@@ -138,13 +138,13 @@ const Methodology = () => {
                     <thead>
                       <tr className="border-b border-border">
                         <th className="text-left py-2 font-semibold text-foreground">Goal</th>
-                        <th className="text-left py-2 font-semibold text-foreground">Protein (g/kg LBM)</th>
+                        <th className="text-left py-2 font-semibold text-foreground">Protein (g/kg body weight)</th>
                         <th className="text-left py-2 font-semibold text-foreground">Rationale</th>
                       </tr>
                     </thead>
                     <tbody className="text-muted-foreground">
-                      <tr className="border-b border-border/50"><td className="py-2">Fat Loss</td><td>2.0–2.2</td><td>Maximize muscle preservation in deficit</td></tr>
-                      <tr className="border-b border-border/50"><td className="py-2">Lean Muscle</td><td>1.8–2.0</td><td>Support muscle protein synthesis</td></tr>
+                      <tr className="border-b border-border/50"><td className="py-2">Fat Loss</td><td>2.0</td><td>Maximize muscle preservation in deficit</td></tr>
+                      <tr className="border-b border-border/50"><td className="py-2">Lean Muscle</td><td>1.6</td><td>Support muscle protein synthesis</td></tr>
                       <tr><td className="py-2">Recomposition</td><td>2.0</td><td>Balance preservation and growth</td></tr>
                     </tbody>
                   </table>
@@ -155,7 +155,7 @@ const Methodology = () => {
               <ul className="list-disc list-inside space-y-1 ml-2 text-muted-foreground">
                 <li><strong>Standard:</strong> ~30% fat, remaining carbs</li>
                 <li><strong>Keto:</strong> 70% fat, 5% carbs</li>
-                <li><strong>High Protein:</strong> 25% fat, remaining carbs (+0.2g/kg protein)</li>
+                <li><strong>High Protein:</strong> Approximately 30% fat; protein target 2.0 g/kg within energy budget</li>
                 <li><strong>Vegetarian:</strong> Same macro ratios, plant-based protein sources highlighted</li>
               </ul>
             </div>
@@ -185,7 +185,7 @@ const Methodology = () => {
                     </thead>
                     <tbody className="text-muted-foreground">
                       <tr className="border-b border-border/50"><td className="py-2">1–2</td><td>Foundation</td><td>Learn movements, establish baseline</td></tr>
-                      <tr className="border-b border-border/50"><td className="py-2">3–4</td><td>Build</td><td>Increase weight 5–10%</td></tr>
+                      <tr className="border-b border-border/50"><td className="py-2">3–4</td><td>Build</td><td>Add reps or a small load only when ready</td></tr>
                       <tr className="border-b border-border/50"><td className="py-2">5–6</td><td>Peak</td><td>Intensity peak, max progressive overload</td></tr>
                       <tr><td className="py-2">7–8</td><td>Deload</td><td>Reduce volume 40%, maintain intensity</td></tr>
                     </tbody>
