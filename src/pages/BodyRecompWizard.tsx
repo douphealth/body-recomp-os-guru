@@ -14,12 +14,13 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import SEOHead from '@/components/SEOHead';
 import { trackCTAClick } from '@/lib/tracking';
-import type { UserInputs } from '@/lib/calculations';
+import { validateInputs, type UserInputs } from '@/lib/calculations';
+import { loadProfile, storeProfile } from '@/lib/plan-storage';
 
 const defaultInputs: UserInputs = {
   age: 30, sex: 'male', heightCm: 175, weightKg: 80, bodyFatPercent: 20,
-  goal: 'fat-loss', workoutFrequency: 4, stepCount: 7000,
-  dietStyle: 'standard', equipmentAccess: 'gym', runningInterest: false,
+  goal: 'recomp', workoutFrequency: 3, stepCount: 7000,
+  dietStyle: 'standard', equipmentAccess: 'gym', runningInterest: false, experience:'beginner', sessionMinutes:45,
 };
 
 const stepMeta = [
@@ -28,23 +29,10 @@ const stepMeta = [
   { icon: Settings2, title: 'PREFERENCES', desc: 'Customize your plan to your lifestyle', color: 'from-amber-500/20 to-yellow-500/10' },
 ];
 
-const bodyFatLabels = [
-  { range: [3, 9], label: 'Very Lean', desc: 'Visible abs, striations' },
-  { range: [10, 14], label: 'Lean', desc: 'Some ab definition' },
-  { range: [15, 19], label: 'Athletic', desc: 'Fit but soft midsection' },
-  { range: [20, 24], label: 'Average', desc: 'Some belly fat' },
-  { range: [25, 34], label: 'Above Average', desc: 'Noticeable fat stores' },
-  { range: [35, 50], label: 'Higher', desc: 'Significant fat stores' },
-];
-
 const BodyRecompWizard = () => {
   const [step, setStep] = useState(1);
-  const [inputs, setInputs] = useState<UserInputs>(() => {
-    try {
-      const stored = sessionStorage.getItem('recomp-inputs');
-      return stored ? JSON.parse(stored) : defaultInputs;
-    } catch { return defaultInputs; }
-  });
+  const [inputs, setInputs] = useState<UserInputs>(() => loadProfile() ?? defaultInputs);
+  const [confirmed,setConfirmed] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [direction, setDirection] = useState(1);
   const navigate = useNavigate();
@@ -58,13 +46,13 @@ const BodyRecompWizard = () => {
   const validateStep = (s: number): boolean => {
     const errs: Record<string, string> = {};
     if (s === 1) {
-      if (!inputs.age || inputs.age < 14 || inputs.age > 100) errs.age = 'Age must be 14–100';
+      if (!inputs.age || inputs.age < 18 || inputs.age > 100) errs.age = 'Age must be 18–100';
       if (!inputs.heightCm || inputs.heightCm < 100 || inputs.heightCm > 250) errs.heightCm = 'Height: 100–250 cm';
       if (!inputs.weightKg || inputs.weightKg < 30 || inputs.weightKg > 300) errs.weightKg = 'Weight: 30–300 kg';
       if (inputs.bodyFatPercent < 3 || inputs.bodyFatPercent > 60) errs.bodyFatPercent = 'Body fat: 3–60%';
     }
     if (s === 2) {
-      if (inputs.workoutFrequency < 2 || inputs.workoutFrequency > 7) errs.workoutFrequency = 'Frequency: 2–7';
+      if (inputs.workoutFrequency < 2 || inputs.workoutFrequency > 6) errs.workoutFrequency = 'Frequency: 2–6';
     }
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -74,13 +62,13 @@ const BodyRecompWizard = () => {
   const prev = () => { setDirection(-1); setStep((s) => Math.max(s - 1, 1)); };
 
   const handleGenerate = () => {
-    if (!validateStep(step)) return;
+    if (!validateStep(step) || !confirmed) return;
+    try { validateInputs(inputs); } catch { setErrors({generate:'Please check your age, body measurements and schedule.'}); return; }
     trackCTAClick('generate_plan', 'wizard');
-    sessionStorage.setItem('recomp-inputs', JSON.stringify(inputs));
-    navigate('/build-my-plan/results');
+    storeProfile(inputs);
+    navigate('/build-my-plan/results',{state:{inputs}});
   };
 
-  const currentBfLabel = bodyFatLabels.find(b => inputs.bodyFatPercent >= b.range[0] && inputs.bodyFatPercent <= b.range[1]);
   const meta = stepMeta[step - 1];
 
   const slideVariants = {
@@ -153,7 +141,7 @@ const BodyRecompWizard = () => {
                     <div className="space-y-5">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <Label htmlFor="age" className="text-xs text-muted-foreground uppercase tracking-wider">Age</Label>
+                          <Label htmlFor="age" className="text-sm text-muted-foreground uppercase tracking-wider">Age</Label>
                           <Input id="age" type="number" value={inputs.age} onChange={(e) => update('age', Number(e.target.value))} className="mt-1.5 h-12 text-lg font-semibold bg-secondary/30 border-border/50 focus:border-primary/50" />
                           {errors.age && <p className="text-xs text-destructive mt-1">{errors.age}</p>}
                         </div>
@@ -190,19 +178,11 @@ const BodyRecompWizard = () => {
                           <Label className="text-xs text-muted-foreground uppercase tracking-wider">Body Fat Estimate</Label>
                           <div className="text-right">
                             <span className="text-2xl font-bold text-primary font-['Oswald']">{inputs.bodyFatPercent}%</span>
-                            {currentBfLabel && (
-                              <p className="text-[10px] text-muted-foreground">{currentBfLabel.label} — {currentBfLabel.desc}</p>
-                            )}
+
                           </div>
                         </div>
                         <Slider value={[inputs.bodyFatPercent]} onValueChange={([v]) => update('bodyFatPercent', v)} min={3} max={50} step={1} className="mt-3" />
-                        <div className="flex justify-between mt-2">
-                          {bodyFatLabels.slice(0, 4).map(b => (
-                            <button key={b.label} onClick={() => update('bodyFatPercent', b.range[0])} className="text-[10px] text-muted-foreground hover:text-primary transition-colors px-1">
-                              {b.label}
-                            </button>
-                          ))}
-                        </div>
+                        <p className="text-sm text-muted-foreground mt-3">Optional estimate for lean-mass display only; it does not determine your resting energy or protein calculation. If uncertain, leave the default and treat the result as approximate.</p>
                         {errors.bodyFatPercent && <p className="text-xs text-destructive mt-1">{errors.bodyFatPercent}</p>}
                       </div>
                     </div>
@@ -215,9 +195,9 @@ const BodyRecompWizard = () => {
                         <Label className="text-xs text-muted-foreground uppercase tracking-wider mb-3 block">Primary Goal</Label>
                         <RadioGroup value={inputs.goal} onValueChange={(v) => update('goal', v)} className="space-y-2">
                           {[
-                            { value: 'fat-loss', label: '🔥 Fat Loss', desc: 'Lose body fat while preserving muscle', detail: '~20% deficit' },
-                            { value: 'lean-muscle', label: '💪 Lean Muscle', desc: 'Build muscle with minimal fat gain', detail: '~10% surplus' },
-                            { value: 'recomp', label: '⚡ Recomposition', desc: 'Lose fat and build muscle simultaneously', detail: 'Calorie cycling' },
+                            { value: 'fat-loss', label: '🔥 Fat Loss', desc: 'Lose body fat while preserving muscle', detail: '~15% deficit if appropriate' },
+                            { value: 'lean-muscle', label: '💪 Lean Muscle', desc: 'Build muscle with minimal fat gain', detail: '~5% surplus' },
+                            { value: 'recomp', label: '⚡ Recomposition', desc: 'Work toward strength and body composition changes', detail: 'Maintenance' },
                           ].map((g) => (
                             <label key={g.value} className={`flex items-center gap-4 p-4 rounded-xl border cursor-pointer transition-all duration-200 ${
                               inputs.goal === g.value ? 'border-primary bg-primary/5 shadow-lg shadow-primary/5' : 'border-border/50 bg-secondary/20 hover:border-primary/30'
@@ -245,11 +225,11 @@ const BodyRecompWizard = () => {
                           <Label className="text-xs text-muted-foreground uppercase tracking-wider">Workout Frequency</Label>
                           <span className="text-2xl font-bold text-primary font-['Oswald']">{inputs.workoutFrequency}<span className="text-sm text-muted-foreground font-normal ml-1">days/wk</span></span>
                         </div>
-                        <Slider value={[inputs.workoutFrequency]} onValueChange={([v]) => update('workoutFrequency', v)} min={2} max={7} step={1} className="mt-3" />
+                        <Slider value={[inputs.workoutFrequency]} onValueChange={([v]) => update('workoutFrequency', v)} min={2} max={6} step={1} className="mt-3" />
                         <div className="flex justify-between text-[10px] text-muted-foreground mt-2">
                           <span>2 days</span>
-                          <span>{inputs.workoutFrequency <= 3 ? 'Full Body' : inputs.workoutFrequency <= 4 ? 'Upper/Lower' : 'PPL'} Split</span>
-                          <span>7 days</span>
+                          <span>{inputs.workoutFrequency <= 3 ? 'Full Body' : inputs.workoutFrequency <= 4 ? 'Upper/Lower' : 'Push/pull/lower'} Split</span>
+                          <span>6 days</span>
                         </div>
                       </div>
 
@@ -274,6 +254,18 @@ const BodyRecompWizard = () => {
                   {/* Step 3 */}
                   {step === 3 && (
                     <div className="space-y-5">
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        <label className="text-sm font-medium">Training experience
+                          <select className="block w-full rounded-lg border bg-secondary p-3 mt-2" value={inputs.experience??'beginner'} onChange={e=>update('experience',e.target.value)}>
+                            <option value="beginner">Beginner / returning</option><option value="experienced">Consistent strength training</option>
+                          </select>
+                        </label>
+                        <label className="text-sm font-medium">Time per strength session
+                          <select className="block w-full rounded-lg border bg-secondary p-3 mt-2" value={inputs.sessionMinutes??45} onChange={e=>update('sessionMinutes',Number(e.target.value))}>
+                            {[20,30,45,60].map(n=><option value={n} key={n}>{n} minutes</option>)}
+                          </select>
+                        </label>
+                      </div>
                       <div>
                         <Label className="text-xs text-muted-foreground uppercase tracking-wider mb-2 block">Diet Style</Label>
                         <Select value={inputs.dietStyle} onValueChange={(v) => update('dietStyle', v)}>
@@ -318,9 +310,15 @@ const BodyRecompWizard = () => {
                       <div className="flex items-center justify-between p-5 rounded-xl border border-border/50 bg-secondary/20 hover:border-primary/30 transition-colors">
                         <div>
                           <Label className="text-sm font-semibold flex items-center gap-2">🏃 Running Interest</Label>
-                          <p className="text-xs text-muted-foreground mt-1">Include a running plan + shoe recs</p>
+                          <p className="text-xs text-muted-foreground mt-1">Include a conservative run-walk option</p>
                         </div>
                         <Switch checked={inputs.runningInterest} onCheckedChange={(v) => update('runningInterest', v)} />
+                      </div>
+                      <div className="rounded-xl border border-border bg-secondary/30 p-4 space-y-3 text-sm leading-relaxed">
+                        <p className="font-semibold">Before starting</p>
+                        <p className="text-muted-foreground">This is a general fitness plan for healthy adults. If you are pregnant, under 18, have an eating disorder, a medical restriction, or new symptoms such as chest pain, fainting or unusual breathlessness, get appropriate professional advice before using it.</p>
+                        <label className="flex gap-3 items-start"><input type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/><span>I am 18 or older and understand the scope and limitations of this plan.</span></label>
+                        {errors.generate&&<p role="alert" className="text-destructive">{errors.generate}</p>}
                       </div>
                     </div>
                   )}
@@ -340,7 +338,7 @@ const BodyRecompWizard = () => {
                   Next <ArrowRight className="h-4 w-4" />
                 </Button>
               ) : (
-                <Button onClick={handleGenerate} className="gradient-red border-0 gap-2 font-bold px-8 shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all hover:scale-[1.02]" style={{ animation: 'pulse-glow 3s ease-in-out infinite' }}>
+                <Button disabled={!confirmed} onClick={handleGenerate} className="gradient-red border-0 gap-2 font-bold px-8 shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all hover:scale-[1.02]" style={{ animation: 'pulse-glow 3s ease-in-out infinite' }}>
                   <Dumbbell className="h-4 w-4" /> Generate My Plan
                 </Button>
               )}

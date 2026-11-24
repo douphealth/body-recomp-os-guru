@@ -15,12 +15,12 @@ const TrainingTab = ({ plan }: Props) => (
         <FlaskConical className="h-4 w-4 text-green-400" />
         <span className="text-xs font-bold text-green-400 uppercase tracking-wider">RPE Guide (Rate of Perceived Exertion)</span>
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[10px]">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
         {[
           { rpe: '6-7', desc: 'Could do 3-4 more reps' },
           { rpe: '7-8', desc: 'Could do 2-3 more reps' },
           { rpe: '8-9', desc: 'Could do 1-2 more reps' },
-          { rpe: '10', desc: 'Absolute failure' },
+          { rpe: '10', desc: 'No reps left; not required' },
         ].map(r => (
           <div key={r.rpe} className="bg-secondary/30 rounded-lg p-2 text-center">
             <span className="font-bold text-primary text-xs">RPE {r.rpe}</span>
@@ -44,7 +44,7 @@ const TrainingTab = ({ plan }: Props) => (
               <div className="text-left">
                 <span className="text-sm font-bold">{week.weekRange}</span>
                 <span className="text-xs text-muted-foreground ml-2">— {week.phase}</span>
-                {week.deload && <span className="ml-2 text-[10px] px-2 py-0.5 rounded-md bg-yellow-500/10 text-yellow-400 font-semibold">DELOAD</span>}
+                {week.deload && <span className="ml-2 text-xs px-2 py-0.5 rounded-md bg-yellow-500/10 text-yellow-400 font-semibold">DELOAD</span>}
               </div>
             </div>
           </AccordionTrigger>
@@ -61,15 +61,15 @@ const TrainingTab = ({ plan }: Props) => (
                   <p className="text-sm font-bold text-primary mb-3">{day.day} — {day.focus}</p>
                   <div className="space-y-2">
                     {day.exercises.map((ex, j) => (
-                      <div key={j} className="flex justify-between items-start text-xs gap-2">
+                      <div key={j} className="flex justify-between items-start text-sm gap-2">
                         <div className="flex-1">
                           <span className="text-muted-foreground">{ex.name}</span>
-                          {ex.notes && <span className="text-[10px] text-muted-foreground/60 italic ml-1">({ex.notes})</span>}
+                          {ex.notes && <span className="text-xs text-muted-foreground/60 italic ml-1">({ex.notes})</span>}
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <span className="font-mono text-primary/80 bg-primary/5 px-2 py-0.5 rounded">{ex.sets}×{ex.reps}</span>
-                          {ex.rpe && <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 font-semibold">RPE {ex.rpe}</span>}
-                          {ex.rest && <span className="text-[10px] text-muted-foreground">{ex.rest}</span>}
+                          {ex.rpe && <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 font-semibold">RPE {ex.rpe}</span>}
+                          {ex.rest && <span className="text-xs text-muted-foreground">{ex.rest}</span>}
                         </div>
                       </div>
                     ))}

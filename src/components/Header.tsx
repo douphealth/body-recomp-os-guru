@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import logoImg from '@/assets/logo.png';
+import { loadProfile } from '@/lib/plan-storage';
 
 
 const Header = () => {
@@ -17,9 +18,11 @@ const Header = () => {
     return () => window.removeEventListener('scroll', handler);
   }, []);
 
+  const hasPlan=!!loadProfile();
   const navItems = [
     { label: 'Home', path: '/' },
-    { label: 'Body Recomp OS', path: '/build-my-plan' },
+    { label: 'Build plan', path: '/build-my-plan' },
+    ...(hasPlan ? [{label:'My plan',path:'/build-my-plan/results'}] : []),
     { label: 'Tools', path: '/free-fitness-calculators' },
     { label: 'Plans', path: '/workout-plans' },
     { label: 'Methodology', path: '/methodology' },
@@ -35,7 +38,7 @@ const Header = () => {
           </span>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-1">
+        <nav className="hidden xl:flex items-center gap-1">
           {navItems.map((item) => (
             <Link
               key={item.path}
@@ -64,7 +67,7 @@ const Header = () => {
           </Link>
         </nav>
 
-        <button className="md:hidden p-2 rounded-lg hover:bg-secondary/50 transition-colors" onClick={() => setMenuOpen(!menuOpen)}>
+        <button className="xl:hidden p-2 rounded-lg hover:bg-secondary/50 transition-colors" onClick={() => setMenuOpen(!menuOpen)} aria-label={menuOpen ? "Close navigation" : "Open navigation"} aria-expanded={menuOpen}>
           {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
       </div>
@@ -76,7 +79,7 @@ const Header = () => {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.2 }}
-            className="md:hidden overflow-hidden glass glass-border"
+            className="xl:hidden overflow-hidden glass glass-border"
           >
             <div className="p-4 space-y-1">
               {navItems.map((item) => (

@@ -21,7 +21,7 @@ const fadeUp = {
 };
 
 const features = [
-  { icon: Flame, label: 'Calorie Target', desc: 'Precise TDEE via Mifflin-St Jeor', gradient: 'from-red-500/20 to-orange-500/10' },
+  { icon: Flame, label: 'Calorie Target', desc: 'Estimated energy needs via Mifflin-St Jeor', gradient: 'from-red-500/20 to-orange-500/10' },
   { icon: Target, label: 'Macro Split', desc: 'Goal-specific protein, carbs & fat', gradient: 'from-orange-500/20 to-amber-500/10' },
   { icon: Dumbbell, label: '8-Week Plan', desc: 'Periodized training for your gear', gradient: 'from-amber-500/20 to-yellow-500/10' },
   { icon: Heart, label: 'Cardio & Recovery', desc: 'Personalized cardio + sleep protocols', gradient: 'from-rose-500/20 to-pink-500/10' },
@@ -30,14 +30,14 @@ const features = [
 
 const stats = [
   { value: '2 min', label: 'To Build Your Plan' },
-  { value: '100%', label: 'Free Forever' },
+  { value: 'Free', label: 'No subscription needed' },
   { value: '8 wk', label: 'Periodized Program' },
   { value: '5+', label: 'Plan Components' },
 ];
 
 const planIncludes = [
   { text: 'Personalized daily calorie target based on your body composition', icon: Flame },
-  { text: 'Optimal protein intake calculated from lean body mass', icon: Target },
+  { text: 'Practical protein and macro targets based on body weight and energy budget', icon: Target },
   { text: 'Custom training split for your equipment and schedule', icon: Dumbbell },
   { text: 'Progressive 8-week periodization with deload phases', icon: TrendingUp },
   { text: 'Cardio plan tailored to your goals and running interest', icon: Zap },
@@ -52,7 +52,7 @@ const Index = () => {
     '@type': 'WebApplication',
     name: 'GearUpToFit Body Recomp OS',
     description: 'Free body recomposition planner — get personalized calories, macros, workouts, recovery, and habit plans in one place.',
-    url: 'https://app.gearuptofit.com',
+    url: 'https://fitness-plan.gearuptofit.com',
     applicationCategory: 'HealthApplication',
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
     author: { '@type': 'Organization', name: 'GearUpToFit', url: 'https://gearuptofit.com' },
@@ -238,10 +238,10 @@ const Index = () => {
                   CALORIES & MACROS <span className="text-primary">TAILORED TO YOU</span>
                 </h2>
                 <p className="text-muted-foreground leading-relaxed mb-6">
-                  Using the Mifflin-St Jeor equation with your exact body composition, we calculate your TDEE and create a precise calorie target with optimal protein, carb, and fat distribution for your specific goal.
+                  Estimate your resting energy with Mifflin-St Jeor and use your activity to build a practical starting nutrition target. Review your recovery and progress before making changes.
                 </p>
                 <div className="space-y-3">
-                  {['TDEE calculated from your exact stats', 'Protein based on lean body mass', 'Diet-style aware (keto, high-protein, vegetarian)'].map(item => (
+                  {['Energy estimates based on your inputs', 'Protein based on body weight and energy budget', 'Diet-style aware (keto, high-protein, vegetarian)'].map(item => (
                     <div key={item} className="flex items-center gap-3">
                       <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                         <CheckCircle className="h-3.5 w-3.5 text-primary" />
@@ -288,10 +288,10 @@ const Index = () => {
                   WORKOUTS THAT <span className="text-primary">EVOLVE WITH YOU</span>
                 </h2>
                 <p className="text-muted-foreground leading-relaxed mb-6">
-                  Your 8-week training plan automatically adapts to your equipment access, workout frequency, and fitness goal — with built-in periodization and deload phases to prevent plateaus.
+                  Your 8-week training plan automatically adapts to your equipment access, workout frequency, and fitness goal — with practical session logging and gradual changes in sets and effort.
                 </p>
                 <div className="space-y-3">
-                  {['Adapts to gym, home, or bodyweight', 'Progressive overload built in', 'Smart deload in weeks 7-8'].map(item => (
+                  {['Adapts to gym, home, or bodyweight', 'Progressive overload built in', 'Reduced effort in weeks 7-8'].map(item => (
                     <div key={item} className="flex items-center gap-3">
                       <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                         <CheckCircle className="h-3.5 w-3.5 text-primary" />

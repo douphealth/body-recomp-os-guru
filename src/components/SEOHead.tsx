@@ -4,11 +4,12 @@ interface SEOHeadProps {
   title: string;
   description: string;
   path: string;
+  noindex?: boolean;
 }
 
-const SEOHead = ({ title, description, path }: SEOHeadProps) => {
+const SEOHead = ({ title, description, path, noindex = false }: SEOHeadProps) => {
   useEffect(() => {
-    const base = 'https://app.gearuptofit.com';
+    const base = 'https://fitness-plan.gearuptofit.com';
     document.title = title;
 
     const setMeta = (name: string, content: string, attr = 'name') => {
@@ -22,6 +23,7 @@ const SEOHead = ({ title, description, path }: SEOHeadProps) => {
     };
 
     setMeta('description', description);
+    setMeta('robots', noindex ? 'noindex, follow' : 'index, follow');
     setMeta('og:title', title, 'property');
     setMeta('og:description', description, 'property');
     setMeta('og:type', 'website', 'property');
@@ -40,7 +42,7 @@ const SEOHead = ({ title, description, path }: SEOHeadProps) => {
       document.head.appendChild(canonical);
     }
     canonical.href = `${base}${path}`;
-  }, [title, description, path]);
+  }, [title, description, path, noindex]);
 
   return null;
 };

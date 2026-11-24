@@ -224,14 +224,14 @@ export async function generatePlanPDF(plan: PlanResults, inputs: UserInputs) {
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   tc(doc, LABEL);
-  const defLabel = plan.deficitOrSurplus < 0 ? `${Math.abs(plan.deficitOrSurplus)} kcal deficit from TDEE` : plan.deficitOrSurplus > 0 ? `${plan.deficitOrSurplus} kcal surplus from TDEE` : 'Maintenance (calorie cycling)';
+  const defLabel = plan.deficitOrSurplus < 0 ? `${Math.abs(plan.deficitOrSurplus)} kcal deficit from TDEE` : plan.deficitOrSurplus > 0 ? `${plan.deficitOrSurplus} kcal surplus from TDEE` : 'Estimated maintenance';
   doc.text(`kcal / day  |  ${defLabel}`, pw / 2, calY + 31, { align: 'center' });
 
   // Macro cards
   const macY = calY + 44;
   const macW = (pw - 50) / 3;
   const macros = [
-    { label: 'PROTEIN', value: `${plan.proteinGrams}g`, pct: `${plan.proteinPercent}%`, detail: `${plan.proteinPerKgLBM}g/kg LBM`, color: RED },
+    { label: 'PROTEIN', value: `${plan.proteinGrams}g`, pct: `${plan.proteinPercent}%`, detail: `${plan.proteinPerKgLBM}g/kg estimated LBM`, color: RED },
     { label: 'CARBS', value: `${plan.carbGrams}g`, pct: `${plan.carbPercent}%`, detail: `${Math.round(plan.carbGrams / inputs.weightKg * 10) / 10}g/kg BW`, color: BLUE },
     { label: 'FAT', value: `${plan.fatGrams}g`, pct: `${plan.fatPercent}%`, detail: `${Math.round(plan.fatGrams / inputs.weightKg * 10) / 10}g/kg BW`, color: AMBER },
   ];
@@ -279,7 +279,7 @@ export async function generatePlanPDF(plan: PlanResults, inputs: UserInputs) {
   doc.setFontSize(6.5);
   doc.setFont('helvetica', 'normal');
   tc(doc, LABEL);
-  doc.text(`Generated ${today}  |  Formulas: Mifflin-St Jeor + Katch-McArdle  |  Diet: ${inputs.dietStyle}`, pw / 2, ph - 22, { align: 'center' });
+  doc.text(`Generated ${today}  |  Formulas: Mifflin-St Jeor  |  Diet: ${inputs.dietStyle}`, pw / 2, ph - 22, { align: 'center' });
   doc.text('For informational purposes only. Consult a healthcare professional before beginning any program.', pw / 2, ph - 17, { align: 'center' });
 
   /* ═══ PAGE 2: SCIENCE & METHODOLOGY ═══ */
@@ -336,7 +336,7 @@ export async function generatePlanPDF(plan: PlanResults, inputs: UserInputs) {
     ['Protein per kg LBM', `${plan.proteinPerKgLBM} g/kg`],
     ['Daily Fiber Target', `${plan.fiberGrams}g`],
     ['Daily Water Target', `${plan.waterLiters}L`],
-    ['Formulas Used', 'Mifflin-St Jeor + Katch-McArdle (averaged)'],
+    ['Formulas Used', 'Mifflin-St Jeor (estimate)'],
     ['Diet Style', inputs.dietStyle.charAt(0).toUpperCase() + inputs.dietStyle.slice(1)],
   ];
   if (plan.weeklyCalorieRange) {
@@ -576,7 +576,7 @@ export async function generatePlanPDF(plan: PlanResults, inputs: UserInputs) {
   doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
   tc(doc, BODY);
-  doc.text('RPE 6-7: Could do 3-4 more reps  |  RPE 7-8: Could do 2-3 more reps  |  RPE 8-9: Could do 1-2 more reps  |  RPE 10: Failure', 22, y + 11);
+  doc.text('RPE 6-7: Could do 3-4 more reps  |  RPE 7-8: Could do 2-3 more reps  |  RPE 8-9: Could do 1-2 more reps  |  RPE 10: Not required', 22, y + 11);
   doc.text('Rest between sets: Compounds 2-3 min  |  Isolations 60-90s  |  Core/Abs 45-60s', 22, y + 16);
   y += 28;
 

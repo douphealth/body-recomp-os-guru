@@ -1,33 +1,14 @@
 import type { TrainingDay } from '@/lib/calculations';
-
-const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-const WeeklyCalendarView = ({ trainingDays, onDayClick }: { trainingDays: TrainingDay[]; onDayClick?: (index: number) => void }) => {
-  const schedule = dayNames.map((name, i) => {
-    const match = trainingDays[i];
-    return { name, training: !!match, focus: match?.focus || 'Rest' };
-  });
-
-  return (
-    <div className="grid grid-cols-7 gap-1.5 mb-4">
-      {schedule.map((day, i) => (
-        <button
-          key={day.name}
-          onClick={() => day.training && onDayClick?.(i)}
-          className={`rounded-lg p-2 text-center transition-all duration-200 ${
-            day.training
-              ? 'bg-primary/15 border border-primary/30 hover:bg-primary/25 cursor-pointer'
-              : 'bg-secondary/30 border border-border/30 cursor-default'
-          }`}
-        >
-          <p className="text-[10px] font-semibold text-muted-foreground uppercase">{day.name}</p>
-          <p className={`text-[9px] mt-0.5 font-medium leading-tight ${day.training ? 'text-primary' : 'text-muted-foreground/60'}`}>
-            {day.training ? day.focus.split(' ').slice(0, 2).join(' ') : 'Rest'}
-          </p>
-        </button>
-      ))}
-    </div>
-  );
-};
-
+import { weekdays } from '@/lib/training-engine';
+const WeeklyCalendarView = ({trainingDays,onDayClick}:{trainingDays:TrainingDay[];onDayClick?:(index:number)=>void}) => (
+  <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 mb-4" aria-label="Weekly strength schedule">
+    {weekdays.map(day=>{
+      const index=trainingDays.findIndex(d=>d.day===day),match=trainingDays[index];
+      return <div className={'rounded-lg p-3 border text-center '+(match?'bg-primary/10 border-primary/30':'bg-secondary/30 border-border')} key={day}>
+        <p className="text-xs font-semibold">{day.slice(0,3)}</p>
+        {match&&onDayClick?<button onClick={()=>onDayClick(index)} className="text-sm text-primary min-h-11">{match.focus}</button>:<p className="text-xs mt-1 text-muted-foreground">{match?.focus??'Recovery'}</p>}
+      </div>;
+    })}
+  </div>
+);
 export default WeeklyCalendarView;

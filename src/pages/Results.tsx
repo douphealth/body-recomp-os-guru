@@ -1,13 +1,11 @@
-import { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import SEOHead from '@/components/SEOHead';
-import JsonLd from '@/components/JsonLd';
-import PlanLoadingScreen from '@/components/PlanLoadingScreen';
 import ShareDialog from '@/components/results/ShareDialog';
 import PrintButton from '@/components/results/PrintButton';
 import NumbersTab from '@/components/results/NumbersTab';
@@ -17,31 +15,26 @@ import ScienceTab from '@/components/results/ScienceTab';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { calculatePlan, getContextualLinks, type UserInputs, type PlanResults } from '@/lib/calculations';
 import { trackResultView } from '@/lib/tracking';
+import PlanWorkspace from '@/components/results/PlanWorkspace';
+import { loadProfile, profileKey } from '@/lib/plan-storage';
 
 const Results = () => {
   const [plan, setPlan] = useState<PlanResults | null>(null);
   const [inputs, setInputs] = useState<UserInputs | null>(null);
-  const [loading, setLoading] = useState(true);
   const [checkedHabits, setCheckedHabits] = useState<Set<number>>(new Set());
   const navigate = useNavigate();
+  const location = useLocation();
   const isMobile = useIsMobile();
 
   useEffect(() => {
-    const stored = sessionStorage.getItem('recomp-inputs');
-    if (!stored) { navigate('/build-my-plan'); return; }
+    const parsed = loadProfile() ?? location.state?.inputs;
+    if (!parsed) { navigate('/build-my-plan', {replace:true}); return; }
     try {
-      const parsed = JSON.parse(stored) as UserInputs;
-      setInputs(parsed);
-      setPlan(calculatePlan(parsed));
+      const calculated=calculatePlan(parsed);
+      setInputs(parsed); setPlan(calculated);
       trackResultView(parsed.goal);
-    } catch {
-      navigate('/build-my-plan');
-    }
-  }, [navigate]);
-
-  const handleLoadingComplete = useCallback(() => {
-    setLoading(false);
-  }, []);
+    } catch { navigate('/build-my-plan',{replace:true}); }
+  }, [navigate,location.state]);
 
   const toggleHabit = (i: number) => {
     setCheckedHabits(prev => {
@@ -51,19 +44,10 @@ const Results = () => {
     });
   };
 
-  if (!plan || !inputs) return null;
+  if (!plan || !inputs) return <main className="container py-16"><p>Opening your plan…</p><Link to="/build-my-plan">Build or reopen a plan</Link></main>;
 
   const contextLinks = getContextualLinks(inputs);
   const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-
-  const faqSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: [
-      { '@type': 'Question', name: `How many calories should I eat for ${plan.goalLabel.toLowerCase()}?`, acceptedAnswer: { '@type': 'Answer', text: `Based on your profile, your target is ${plan.calorieTarget} calories per day with ${plan.proteinGrams}g of protein.` } },
-      { '@type': 'Question', name: 'How is my calorie target calculated?', acceptedAnswer: { '@type': 'Answer', text: `We average two validated equations: the Mifflin-St Jeor (1990) and Katch-McArdle formulas to calculate your BMR of ${plan.bmr} kcal, then multiply by an activity factor based on your workout frequency and daily step count to get your TDEE of ${plan.tdee} kcal.` } },
-    ],
-  };
 
   const resultContent = (
     <>
@@ -75,7 +59,7 @@ const Results = () => {
               YOUR 8-WEEK <span className="text-primary">{plan.goalLabel.toUpperCase()}</span> PLAN
             </h1>
             <p className="text-xs text-muted-foreground mt-1">
-              {inputs.age}yo {inputs.sex} • {inputs.weightKg}kg • {inputs.bodyFatPercent}% BF • {plan.leanBodyMass}kg LBM • {inputs.equipmentAccess} • {inputs.dietStyle} • Generated {today}
+              {inputs.age}yo {inputs.sex} • {inputs.weightKg}kg • {inputs.bodyFatPercent}% estimated BF • {plan.leanBodyMass}kg estimated LBM • {inputs.equipmentAccess} • {inputs.dietStyle} • Generated {today}
             </p>
           </div>
           <div className="flex gap-2 no-print" data-no-print>
@@ -85,6 +69,8 @@ const Results = () => {
         </div>
       </div>
 
+      <PlanWorkspace key={profileKey(inputs)} plan={plan} inputs={inputs} />
+      <h2 className="text-xl font-semibold mb-4 mt-8">Your complete plan details</h2>
       {isMobile ? (
         <Accordion type="single" collapsible defaultValue="numbers" className="space-y-2">
           <AccordionItem value="numbers" className="stat-card !p-0 overflow-hidden border-border">
@@ -124,27 +110,16 @@ const Results = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <SEOHead
-        title={`Your ${plan.goalLabel} Plan — ${plan.calorieTarget} cal/day | GearUpToFit Body Recomp OS`}
-        description={plan.quickSummary.slice(0, 155)}
+        title="Your private fitness plan | GearUpToFit"
+        description="Your personal fitness plan, training schedule and journal."
         path="/build-my-plan/results"
+        noindex
       />
-      <JsonLd data={faqSchema} />
       <Header />
 
       <main className="flex-1 py-8 md:py-12">
-        <div className="container max-w-4xl">
-          {loading ? (
-            <PlanLoadingScreen onComplete={handleLoadingComplete} />
-          ) : (
-            <motion.div
-              key="results"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5 }}
-            >
-              {resultContent}
-            </motion.div>
-          )}
+        <div className="container max-w-5xl">
+          <motion.div initial={{opacity:0}} animate={{opacity:1}}>{resultContent}</motion.div>
         </div>
       </main>
 

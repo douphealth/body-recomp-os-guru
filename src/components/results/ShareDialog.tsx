@@ -13,12 +13,11 @@ interface ShareDialogProps {
 
 const ShareDialog = ({ goalLabel, plan, inputs }: ShareDialogProps) => {
   const [generating, setGenerating] = useState(false);
-  const url = window.location.href;
+  const url = 'https://fitness-plan.gearuptofit.com/build-my-plan';
   const text = `Just built my 8-week ${goalLabel.toLowerCase()} plan with @GearUpToFit!`;
 
-  const copyLink = () => {
-    navigator.clipboard.writeText(url);
-    toast.success('Link copied to clipboard!');
+  const copyLink = async () => {
+    try { await navigator.clipboard.writeText(url); toast.success('Public planner link copied.'); } catch { toast.error('Could not copy the link. You can open the public planner directly.'); }
   };
 
   const handlePDF = async () => {
@@ -47,11 +46,11 @@ const ShareDialog = ({ goalLabel, plan, inputs }: ShareDialogProps) => {
       </DialogTrigger>
       <DialogContent className="bg-card border-border">
         <DialogHeader>
-          <DialogTitle className="font-['Oswald'] tracking-wider">SHARE YOUR PLAN</DialogTitle>
+          <DialogTitle className="font-['Oswald'] tracking-wider">SHARE THE PLANNER</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3 pt-2">
+        <div className="space-y-3 pt-2"><p className="text-sm text-muted-foreground">The public link does not include your profile or journal. The PDF includes personal plan details.</p>
           <Button variant="outline" className="w-full justify-start gap-3 h-12 border-border/50 hover:border-primary/30" onClick={copyLink}>
-            <Link2 className="h-4 w-4 text-primary" /> Copy Link
+            <Link2 className="h-4 w-4 text-primary" /> Copy public planner link
           </Button>
           <a href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`} target="_blank" rel="noopener noreferrer" className="block">
             <Button variant="outline" className="w-full justify-start gap-3 h-12 border-border/50 hover:border-primary/30">

@@ -25,12 +25,12 @@ const NumbersTab = ({ plan, inputs }: Props) => (
             <span className="text-lg text-muted-foreground font-['Oswald']">kcal</span>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            {plan.deficitOrSurplus < 0 ? `${Math.abs(plan.deficitOrSurplus)} kcal deficit` : plan.deficitOrSurplus > 0 ? `${plan.deficitOrSurplus} kcal surplus` : 'Calorie cycling around maintenance'}
+            {plan.deficitOrSurplus < 0 ? `${Math.abs(plan.deficitOrSurplus)} kcal deficit` : plan.deficitOrSurplus > 0 ? `${plan.deficitOrSurplus} kcal surplus` : 'Estimated maintenance'}
           </p>
         </div>
         <div className="grid grid-cols-3 gap-4 text-center">
           {[
-            { label: 'Protein', value: plan.proteinGrams, unit: 'g', color: 'text-red-400', sub: `${plan.proteinPerKgLBM}g/kg` },
+            { label: 'Protein', value: plan.proteinGrams, unit: 'g', color: 'text-red-400', sub: `${(plan.proteinGrams/inputs.weightKg).toFixed(1)}g/kg body weight` },
             { label: 'Carbs', value: plan.carbGrams, unit: 'g', color: 'text-blue-400' },
             { label: 'Fat', value: plan.fatGrams, unit: 'g', color: 'text-yellow-400' },
           ].map(m => (
@@ -102,13 +102,13 @@ const NumbersTab = ({ plan, inputs }: Props) => (
     <div className="stat-card">
       <h3 className="text-sm font-bold uppercase tracking-wider mb-3 font-['Oswald']">Calculation Details</h3>
       <div className="space-y-2 text-xs">
-        <div className="flex justify-between"><span className="text-muted-foreground"><GlossaryTooltip term="BMR">BMR</GlossaryTooltip> (Mifflin + Katch avg)</span><span className="font-medium">{plan.bmr} kcal</span></div>
+        <div className="flex justify-between"><span className="text-muted-foreground"><GlossaryTooltip term="BMR">BMR</GlossaryTooltip> (Mifflin-St Jeor)</span><span className="font-medium">{plan.bmr} kcal</span></div>
         <div className="flex justify-between"><span className="text-muted-foreground"><GlossaryTooltip term="TDEE">TDEE</GlossaryTooltip> (maintenance)</span><span className="font-medium">{plan.tdee} kcal</span></div>
         <div className="flex justify-between"><span className="text-muted-foreground">Thermic Effect of Food</span><span className="font-medium">~{plan.tef} kcal</span></div>
         <div className="flex justify-between"><span className="text-muted-foreground"><GlossaryTooltip term="NEAT">NEAT</GlossaryTooltip> estimate</span><span className="font-medium">~{plan.neat} kcal</span></div>
         <div className="flex justify-between"><span className="text-muted-foreground"><GlossaryTooltip term="Lean Body Mass">Lean Body Mass</GlossaryTooltip></span><span className="font-medium">{plan.leanBodyMass} kg</span></div>
-        <div className="flex justify-between"><span className="text-muted-foreground">Protein per kg LBM</span><span className="font-medium text-primary">{plan.proteinPerKgLBM}g/kg</span></div>
-        <div className="flex justify-between"><span className="text-muted-foreground">Formulas</span><span className="font-medium text-primary"><GlossaryTooltip term="Mifflin-St Jeor">Mifflin-St Jeor</GlossaryTooltip> + Katch-McArdle</span></div>
+        <div className="flex justify-between"><span className="text-muted-foreground">Protein per kg estimated LBM (display only)</span><span className="font-medium text-primary">{plan.proteinPerKgLBM}g/kg</span></div>
+        <div className="flex justify-between"><span className="text-muted-foreground">Formulas</span><span className="font-medium text-primary"><GlossaryTooltip term="Mifflin-St Jeor">Mifflin-St Jeor</GlossaryTooltip></span></div>
         {plan.weeklyCalorieRange && (
           <div className="flex justify-between"><span className="text-muted-foreground"><GlossaryTooltip term="Recomp">Recomp</GlossaryTooltip> cycling range</span><span className="font-medium text-primary">{plan.weeklyCalorieRange.low}–{plan.weeklyCalorieRange.high}</span></div>
         )}

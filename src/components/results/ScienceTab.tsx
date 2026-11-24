@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import ComparePlans from '@/components/results/ComparePlans';
 import { trackInternalLinkClick } from '@/lib/tracking';
 import { calculatePlan, type UserInputs, type PlanResults } from '@/lib/calculations';
+import { storeProfile } from '@/lib/plan-storage';
 
 interface Props {
   plan: PlanResults;
@@ -22,7 +23,7 @@ const ScienceTab = ({ plan, inputs, contextLinks, setInputs, setPlan }: Props) =
         <span className="text-xs font-bold text-blue-400 uppercase tracking-wider">Evidence-Based Methodology</span>
       </div>
       <p className="text-xs text-muted-foreground leading-relaxed">
-        Every number in your plan is derived from peer-reviewed research and validated equations. Below are the scientific foundations for each component.
+        The plan combines published evidence with transparent planning heuristics. Results are starting estimates, not measured values or individualized clinical prescriptions.
       </p>
     </div>
 
@@ -72,7 +73,7 @@ const ScienceTab = ({ plan, inputs, contextLinks, setInputs, setPlan }: Props) =
 
     <ComparePlans currentGoal={inputs.goal} inputs={inputs} onSwitchGoal={(goal) => {
       const newInputs = { ...inputs, goal };
-      sessionStorage.setItem('recomp-inputs', JSON.stringify(newInputs));
+      storeProfile(newInputs);
       setInputs(newInputs);
       setPlan(calculatePlan(newInputs));
       window.scrollTo({ top: 0, behavior: 'smooth' });
