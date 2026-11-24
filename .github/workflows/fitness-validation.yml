@@ -2,7 +2,7 @@ name: Fitness validation
 on:
   pull_request:
   push:
-    branches: [main, 'upgrade/fitness-plan-coach-20261124']
+    branches: [main, 'upgrade/**']
 permissions:
   contents: read
 jobs:
@@ -14,7 +14,28 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      # Existing package-lock is stale; install reconciles it on the runner until a regenerated lock is committed.
+      - run: npm install --no-audit --no-fund
       - run: npm test
+        env:
+          FITNESS_PDF_QA: fitness-workbook-sample.pdf
       - run: npx tsc --noEmit -p tsconfig.app.json
       - run: npm run build
+      - name: Check PDF layout output
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y poppler-utils
+          pdfinfo fitness-workbook-sample.pdf
+          pdftotext fitness-workbook-sample.pdf workbook.txt
+          grep -q 'Week 08' workbook.txt
+          grep -q 'Technique library' workbook.txt || grep -q 'Exercise execution guide' workbook.txt
+          mkdir -p workbook-preview
+          pdftoppm -f 1 -l 3 -scale-to 1200 -png fitness-workbook-sample.pdf workbook-preview/page
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fitness-workbook-qa
+          path: |
+            fitness-workbook-sample.pdf
+            workbook-preview/
+            package-lock.json

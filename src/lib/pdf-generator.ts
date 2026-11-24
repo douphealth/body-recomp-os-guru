@@ -1,913 +1,163 @@
 import jsPDF from 'jspdf';
-import { type PlanResults, type UserInputs } from '@/lib/calculations';
-import logoUrl from '@/assets/logo.png';
+import type { PlanResults, UserInputs } from './calculations';
+import { getProgramWeek, getWeekSessionMinutes, progressionRules, effortGuide, referenceLinks } from './program-guide';
+import { trainingMinutes } from './training-engine';
+import { getWeeklyMenu, shoppingList, menuNote } from './weekly-menu';
 
-/* ─── Color Palette (white-background premium) ─── */
-const RED: RGB     = [200, 35, 30];
-const DARK: RGB    = [25, 25, 30];
-const BODY: RGB    = [60, 60, 70];
-const LABEL: RGB   = [130, 130, 140];
-const RULE: RGB    = [220, 220, 225];
-const CARD: RGB    = [245, 245, 248];
-const WHITE: RGB   = [255, 255, 255];
-const BLUE: RGB    = [40, 110, 220];
-const AMBER: RGB   = [200, 155, 25];
-const GREEN: RGB   = [30, 160, 80];
-const SOFT_RED: RGB = [255, 240, 240];
-const SOFT_BLUE: RGB = [235, 245, 255];
-const SOFT_GREEN: RGB = [235, 250, 240];
-const SOFT_AMBER: RGB = [255, 250, 235];
-
-type RGB = [number, number, number];
-
-const tc = (d: jsPDF, c: RGB) => d.setTextColor(c[0], c[1], c[2]);
-const fc = (d: jsPDF, c: RGB) => d.setFillColor(c[0], c[1], c[2]);
-const dc = (d: jsPDF, c: RGB) => d.setDrawColor(c[0], c[1], c[2]);
-
-/* ─── Sanitize text ─── */
-function clean(text: string): string {
-  return text
-    .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
-    .replace(/[\u{2600}-\u{27BF}]/gu, '')
-    .replace(/[\u{FE00}-\u{FE0F}]/gu, '')
-    .replace(/[\u{200D}]/gu, '')
-    .replace(/[\u{E0020}-\u{E007F}]/gu, '')
-    .replace(/[\u00D8\u00DE\u00CF\u00FE\u00DF\u00DC\u00A7\u00C5\u00CA\u00E0\u00D0]/g, '')
-    .replace(/[^\x20-\x7E]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
+type RGB=[number,number,number];
+const ink:RGB=[24,47,40], dark:RGB=[14,35,29], green:RGB=[39,89,66], lime:RGB=[197,239,129], muted:RGB=[75,99,90], paper:RGB=[246,249,245], line:RGB=[212,226,218], white:RGB=[255,255,255], amber:RGB=[120,83,30];
+const M=16,W=178,H=297,BOTTOM=274;
+const clean=(s:unknown)=>String(s??'').replace(/[\u2013\u2014]/g,'-').replace(/[\u2018\u2019]/g,"'").replace(/[\u201c\u201d]/g,'"').replace(/\u00d7/g,'x').replace(/\u2022/g,' / ').replace(/[^\x20-\x7E\n]/g,'').trim();
+const fmt=(n:number)=>Math.round(n).toLocaleString('en-US');
+const diff=(n:number)=>(n>0?'+':'')+n;
+const dietLabel=(d:UserInputs['dietStyle'])=>({standard:'Balanced',vegetarian:'Vegetarian (eggs and dairy)',keto:'Low-carbohydrate example', 'high-protein':'Higher protein'}[d]);
+const equipmentLabel=(e:UserInputs['equipmentAccess'])=>({gym:'Full gym',home:'Home gym',minimal:'Bodyweight'}[e]);
+class Book {
+ readonly doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true});
+ y=35;
+ runningTitle='';
+ runningLabel='';
+ constructor(){this.doc.setProperties({title:'GearUpToFit - Personal Fitness Workbook',subject:'Private eight-week fitness program',author:'GearUpToFit',creator:'GearUpToFit Fitness Plan OS'});}
+ fill(c:RGB){this.doc.setFillColor(...c);}
+ color(c:RGB){this.doc.setTextColor(...c);}
+ rect(x:number,y:number,w:number,h:number,c:RGB){this.fill(c);this.doc.roundedRect(x,y,w,h,2,2,'F');}
+ text(s:unknown,x:number,y:number,size=10,bold=false,c:RGB=ink,align:'left'|'center'|'right'='left'){
+  this.doc.setFont('helvetica',bold?'bold':'normal');this.doc.setFontSize(size);this.color(c);this.doc.text(clean(s),x,y,{align});
+ }
+ lines(s:unknown,width=W,size=10,bold=false):string[]{this.doc.setFont('helvetica',bold?'bold':'normal');this.doc.setFontSize(size);return this.doc.splitTextToSize(clean(s),width) as string[];}
+ rule(y:number,x=M,w=W){this.doc.setDrawColor(...line);this.doc.setLineWidth(.25);this.doc.line(x,y,x+w,y);}
+ page(label:string,title:string,subtitle?:string){
+  this.doc.addPage();this.runningTitle=title;this.runningLabel=label;
+  this.fill(dark);this.doc.rect(0,0,210,9,'F');
+  this.text('GEARUPTOFIT  /  FITNESS PLAN OS',M,6.1,8,true,lime);
+  this.text(label.toUpperCase(),194,6.1,8,true,white,'right');
+  this.text(label.toUpperCase(),M,21,8,true,green);
+  const ts=this.lines(title,W,22,true);
+  ts.forEach((l,i)=>this.text(l,M,31+i*8,22,true));
+  this.y=35+(ts.length-1)*8;
+  if(subtitle)this.para(subtitle,10,muted,4);
+  this.rule(this.y);this.y+=6;
+ }
+ ensure(h:number){if(this.y+h>BOTTOM)this.page(this.runningLabel,this.runningTitle+' / continued');}
+ para(s:unknown,size=10,c:RGB=ink,after=3){const ls=this.lines(s,W,size);const lh=size*.43;this.ensure(ls.length*lh+after+2);ls.forEach((l,i)=>this.text(l,M,this.y+i*lh+size*.31,size,false,c));this.y+=ls.length*lh+after;}
+ sub(s:string){this.ensure(13);this.text(s,M,this.y+4.5,12,true,green);this.y+=9;}
+ callout(title:string,body:string){const ls=this.lines(body,W-12,10);const h=14+ls.length*4.3;this.ensure(h+3);this.rect(M,this.y,W,h,paper);this.fill(green);this.doc.rect(M,this.y,1.7,h,'F');this.text(title,M+6,this.y+6,10,true,green);ls.forEach((l,i)=>this.text(l,M+6,this.y+11+i*4.3,10,false,ink));this.y+=h+4;}
+ table(headers:string[],widths:number[],rows:(string|number)[][],size=9){
+  const headerH=9;
+  const head=()=>{this.rect(M,this.y,W,headerH,dark);let x=M;headers.forEach((h,i)=>{this.text(h,x+2.4,this.y+5.8,8,true,white);x+=widths[i];});this.y+=headerH;};
+  this.ensure(headerH+15);head();
+  rows.forEach((row,idx)=>{
+   const ls=row.map((v,i)=>this.lines(v,widths[i]-4.8,size,false));
+   const lh=size*.43, height=Math.max(9,Math.max(...ls.map(l=>l.length))*lh+5);
+   if(this.y+height>BOTTOM){this.page(this.runningLabel,this.runningTitle+' / continued');head();}
+   if(idx%2===0)this.rect(M,this.y,W,height,paper);
+   let x=M;ls.forEach((ls,i)=>{const yy=this.y+(height-ls.length*lh)/2+size*.31;ls.forEach((l,j)=>this.text(l,x+2.4,yy+j*lh,size,false,i===0?ink:muted));x+=widths[i];});
+   this.rule(this.y+height);this.y+=height;
+  });this.y+=5;
+ }
+ check(s:string){this.ensure(12);const ls=this.lines(s,W-11,10);this.doc.setDrawColor(...green);this.doc.setLineWidth(.35);this.doc.rect(M,this.y+1,3.5,3.5);ls.forEach((l,i)=>this.text(l,M+8,this.y+4+i*4.3,10,false));this.y+=Math.max(8,ls.length*4.3+3);}
+ blank(label:string){this.ensure(13);this.text(label,M,this.y+4,9,true,muted);this.rule(this.y+10);this.y+=13;}
+ finish(){const count=this.doc.getNumberOfPages();for(let i=2;i<=count;i++){this.doc.setPage(i);this.rule(281);this.text('PRIVATE PERSONAL WORKBOOK  /  gearuptofit.com',M,287,8,false,muted);this.text(String(i).padStart(2,'0')+' / '+count,194,287,8,true,green,'right');}return this.doc;}
 }
 
-/* ─── Helpers ─── */
-function whiteBg(d: jsPDF) {
-  fc(d, WHITE);
-  d.rect(0, 0, d.internal.pageSize.getWidth(), d.internal.pageSize.getHeight(), 'F');
+export function buildPlanPDF(plan:PlanResults,inputs:UserInputs):jsPDF{
+ const b=new Book(),d=b.doc;
+ const menu=getWeeklyMenu(plan,inputs),weeks=Array.from({length:8},(_,i)=>getProgramWeek(plan,inputs,i+1));
+ // Cover - no heavy photographic background, sharp vector typography, printer-friendly interiors.
+ b.fill(dark);d.rect(0,0,210,H,'F');b.fill(green);d.rect(166,0,44,297,'F');b.fill(lime);d.rect(16,17,11,2,'F');
+ b.text('GEARUPTOFIT / PERSONAL FITNESS OS',16,27,11,true,lime);
+ b.text('YOUR PERSONAL',16,55,11,true,white);
+ b.text('8-week',16,76,45,true,white);b.text('fitness',16,94,45,true,white);b.text('workbook.',16,112,45,true,lime);
+ const goals=b.lines(plan.goalLabel,142,21,true);goals.forEach((l,i)=>b.text(l,16,130+i*7.8,21,true,white));
+ b.text('TRAIN  /  EAT  /  RECOVER  /  PROGRESS',16,147,9,true,lime);
+ b.rect(16,158,178,44,[32,61,49]);
+ const stats=[['DAILY ENERGY',fmt(plan.calorieTarget)+' kcal'],['PROTEIN',plan.proteinGrams+' g'],['STRENGTH DAYS',weeks[0].strengthCount+' / week']];
+ stats.forEach(([label,value],i)=>{const x=22+i*58;b.text(label,x,169,8,true,lime);b.text(value,x,184,18,true,white);});
+ b.text(equipmentLabel(inputs.equipmentAccess)+'  /  '+(inputs.experience==='experienced'?'Experienced':'Beginner / returning')+'  /  '+(inputs.sessionMinutes??45)+' min strength budget',16,213,10,false,white);
+ b.text('Prepared '+new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}),16,220,10,false,white);
+ const coverText=b.lines('A practical, evidence-informed starting plan for healthy adults. Estimates are not a medical prescription. Use the workbook to log actual effort, build consistency and review recovery.',142,11);
+ coverText.forEach((l,i)=>b.text(l,16,235+i*5,11,false,white));
+ b.text('fitness-plan.gearuptofit.com',16,280,10,true,lime);
+ // Onboarding / roadmap
+ b.page('01 / Start here','Your program at a glance','Read this page before starting. Keep your personal workbook private.');
+ b.callout('YOUR STARTING PLAN',plan.quickSummary);
+ b.table(['Profile','Your selection'],[63,115],[['Goal',plan.goalLabel],['Age / body weight / height',inputs.age+' years / '+inputs.weightKg+' kg / '+inputs.heightCm+' cm'],['Training setup',equipmentLabel(inputs.equipmentAccess)+' / '+(inputs.sessionMinutes??45)+' min / '+weeks[0].strengthCount+' strength days'],['Diet preference',dietLabel(inputs.dietStyle)],['Current daily steps',fmt(inputs.stepCount)+' (reported activity, not a compulsory target)']],10);
+ b.sub('Your eight-week roadmap');
+ b.table(['Weeks','Phase','How to progress'],[22,37,119],plan.trainingPlan.map(p=>[p.weekRange.replace('Weeks ',''),p.phase,p.volumeChange??'']),10);
+ b.sub('How to use this workbook');b.para('Use the weekly calendars to know when to train and recover. Use the workout pages for prescribed sets and your own reps/load notes. Repeat the example meal rotation or substitute foods. Record weekly energy, sleep and training consistency.');
+ b.callout('IMPORTANT SAFETY LIMIT','Adults with medical restrictions, pregnancy, an eating disorder, new symptoms, or injuries need individualized advice. Seek urgent help for severe symptoms. If a movement causes sharp pain, stop; do not train through it.');
+ // nutrition
+ b.page('02 / Nutrition','Your daily nutrition targets','Starting estimates. Adjust based on actual recovery and longer-term trends, not a single weigh-in.');
+ b.table(['Daily target','Amount','Meaning'],[50,33,95],[['Energy',fmt(plan.calorieTarget)+' kcal','Estimated starting intake'],['Maintenance',fmt(plan.tdee)+' kcal','Estimated daily expenditure'],['Protein',plan.proteinGrams+' g','Starting protein target'],['Carbohydrate',plan.carbGrams+' g','Carbohydrate allowance'],['Fat',plan.fatGrams+' g','Dietary fat allowance'],['Fiber',plan.fiberGrams+' g','Gradually increase as tolerated']],10);
+ b.sub('Energy distribution');
+ const macros=[['Protein',plan.proteinPercent,green],['Carbs',plan.carbPercent,[112,147,136] as RGB],['Fat',plan.fatPercent,[197,170,103] as RGB]] as const;
+ let x=M;macros.forEach(([,p,c])=>{const w=W*p/100;b.fill(c);d.rect(x,b.y,w,6,'F');x+=w;});b.y+=11;
+ macros.forEach(([name,p],i)=>b.text(name+' '+p+'%',M+i*59,b.y,9,true,muted));b.y+=9;
+ b.sub('Example meal allocation (targets, not measured food)');
+ b.table(['Meal','kcal','Protein','Carbs','Fat'],[62,29,29,29,29],plan.mealTiming.map(m=>[m.meal,m.calories,m.protein+' g',m.carbs+' g',m.fat+' g']),10);
+ b.para('Use meals that suit your schedule. Food composition varies by brand and preparation; the rotation on the next pages uses rounded typical estimates. Actual intake may differ from targets.',10,muted);
+ if(inputs.dietStyle==='keto')b.callout('LOW-CARBOHYDRATE PREFERENCE','This example cannot guarantee ketosis. Low-carb eating is optional and not appropriate for everyone; consult a clinician if taking diabetes medication or managing a relevant condition.');
+ // seven full menu pages, compact meal tables and prep
+ menu.forEach(day=>{
+  b.page('02 / Nutrition rotation','Day '+day.day+' / meal plan','Repeat this seven-day rotation as useful; quantities are approximate edible, cooked or drained weights as specified.');
+  b.table(['Daily estimate','kcal','Protein','Carbs','Fat'],[62,29,29,29,29],[['Target',plan.calorieTarget,plan.proteinGrams+' g',plan.carbGrams+' g',plan.fatGrams+' g'],['Example menu',day.totals.calories,day.totals.protein+' g',day.totals.carbs+' g',day.totals.fat+' g'],['Difference',diff(day.gap.calories),diff(day.gap.protein)+' g',diff(day.gap.carbs)+' g',diff(day.gap.fat)+' g']],9);
+  day.meals.forEach((meal,i)=>{
+   const ingredients=meal.items.map(it=>it.name+' '+it.grams+' g'+(it.prep?' ('+it.prep+')':'')).join(' / ');
+   const il=b.lines(ingredients,W,10),pl=b.lines(meal.prep,W,9);
+   b.ensure(20+il.length*4.3+pl.length*3.87);
+   b.sub(['Breakfast','Lunch','Snack','Dinner'][i]+' / '+meal.name);
+   b.para(ingredients,10,ink,2);
+   b.para('Prepare: '+meal.prep,9,muted,2);
+   b.para('Est. '+meal.totals.calories+' kcal | P '+meal.totals.protein+' g | C '+meal.totals.carbs+' g | F '+meal.totals.fat+' g',9,green,4);
+  });
+  b.para(menuNote(day,plan),9,muted);
+ });
+ b.page('02 / Nutrition rotation','Seven-day shopping list','Totals are from the example rotation; cooked and edible quantities are not equivalent to raw purchase weights.');
+ b.table(['Food','Quantity','Weight basis'],[86,34,58],shoppingList(menu).map(i=>[i.name,fmt(i.grams)+' g',i.prep||'edible weight']),9);
+ b.sub('Meal preparation');b.para('Batch-cook grains and legumes, prepare vegetables, and portion protein for a few days at a time. Refrigerate promptly and follow safe storage and cooking guidance. Substitute suitable foods for allergies and preferences. No supplement is required.');
+ // workout guidance
+ b.page('03 / Training','How to execute a workout','Train with technique, manageable effort and repeatable progression.');
+ b.sub('Every strength session');['Warm up for 5-7 minutes: easy walking or cycling and a light practice set of the first movements.','Complete the assigned exercises in order. The prescribed sets are working sets; rest between sets as listed.','For unilateral exercises, complete the prescribed reps on each side. If needed, split sets or reduce reps while maintaining technique.','Cool down with a few minutes of easy movement. Hydrate according to thirst and exercise conditions.'].forEach(s=>b.check(s));
+ b.sub('Understanding effort (RPE)');
+ b.table(['Target','What it means'],[37,141],effortGuide.map(x=>[x[0],x[1]]),10);
+ b.sub('Progression rules');progressionRules.forEach(s=>b.para(s,10,ink,3));
+ b.callout('TIME BUDGET','Estimated strength duration includes a short warm-up and typical set/rest timing. Actual time may differ; do not rush technique or shorten necessary rests. Cardio minutes are listed separately.');
+ // actual 8 weekly schedules
+ weeks.forEach(w=>{
+  b.page('04 / Weekly program','Week '+String(w.week).padStart(2,'0')+' / '+w.phase,w.guidance);
+  b.table(['Day','Strength','Aerobic','Est. total'],[28,70,48,32],w.days.map(day=>[day.day,day.strength?day.strength.focus:'No strength',day.cardioMinutes?day.cardioMinutes+' min easy/moderate':day.strength?'Recovery as needed':'Rest / gentle movement',getWeekSessionMinutes(day)?getWeekSessionMinutes(day)+' min':'Rest']),9);
+  b.callout('AEROBIC ACTIVITY / '+w.cardioMinutes+' MINUTES PLANNED',inputs.runningInterest?'Walk or use an easy run/walk progression if brisk walking is comfortable. Begin with short jogging intervals, walk to recover, and increase only if well tolerated.':'Choose brisk walking, cycling or another low-impact activity. Keep conversational effort. Build gradually toward public-health activity guidance; planned sessions do not include incidental walking.');
+  b.sub('Weekly focus');w.habit.forEach(h=>b.check(h));
+  b.sub('Weekly check-in');b.blank('Strength sessions completed: ____ / '+w.strengthCount+'    |    Aerobic minutes completed: ____');b.blank('Average sleep / energy:');b.blank('One change for next week:');
+  // Print-ready sessions. The exact week number is repeated even when phases share a prescription.
+  b.page('04 / Week '+w.week,'Week '+String(w.week).padStart(2,'0')+' / workout log','Write actual reps and load after each working set. Do not force progression when recovery is poor.');
+  w.days.filter(day=>day.strength).forEach(day=>{
+   const s=day.strength!;const rows=s.exercises.map(ex=>[ex.name,ex.sets+' x '+ex.reps,'RPE '+(ex.rpe??'6-8'),ex.rest??'90s','____________']);
+   // Keep a session title and its table together unless an exceptionally long row requires pagination.
+   b.ensure(22+rows.length*14);
+   b.sub(day.day+' / '+s.focus+' / ~'+trainingMinutes(s.exercises)+' min');
+   b.table(['Exercise','Sets x reps','Effort','Rest','Actual reps / kg'],[56,31,25,21,45],rows,9);
+   b.blank('Session completed / notes:');
+  });
+ });
+ // library shared across weeks (unique exercises)
+ b.page('05 / Technique library','Exercise execution guide','Use a controlled range of motion and an equipment-appropriate alternative. Stop when an exercise is painful.');
+ const exercises=new Map<string,PlanResults['trainingPlan'][number]['days'][number]['exercises'][number]>();
+ plan.trainingPlan.forEach(p=>p.days.forEach(day=>day.exercises.forEach(e=>exercises.set(e.name,e))));
+ exercises.forEach(e=>{const cue=e.notes??'Use controlled technique and a comfortable range of motion.';b.ensure(20+b.lines(cue,W,10).length*4.3);b.sub(e.name);b.para(cue);if(e.alternative)b.para('Alternative: '+e.alternative+'. Match effort rather than load.',9,muted);});
+ // recovery and review
+ b.page('06 / Recovery','Recover and review','Consistency is more important than perfection. Treat all targets as flexible starting points.');
+ b.sub('Daily recovery checklist');plan.recoveryChecklist.forEach(s=>b.check(s));
+ b.sub('Eight-week habit focus');b.table(['Week','Focus','Action'],[20,43,115],plan.habitPlan.map(w=>[w.week,w.focus,w.habits.join(' / ')]),9);
+ b.page('06 / Review','Your progress summary','Record trends using similar conditions. You do not need to weigh yourself or take photos to use this plan.');
+ b.table(['Week','Strength done','Cardio min','Sleep / energy','Notes'],[20,34,28,43,53],weeks.map(w=>[w.week,'___ / '+w.strengthCount,'________','____________','____________']),10);
+ b.sub('End-of-cycle reflection');['Which exercises became easier or stronger?','Which schedule was sustainable?','How did energy and sleep change?','What will you keep, adjust or discuss with a professional?'].forEach(s=>b.blank(s));
+ b.callout('NEXT CYCLE','If training is comfortable and recovery is good, repeat the cycle with gradually progressed loads or variations. If fatigue or pain persists, reduce training demands and seek individual advice.');
+ // methodology & references
+ b.page('07 / Evidence','Method and limitations','Evidence informs the general guidance; this specific algorithm and its eight-week schedule are not clinically validated.');
+ plan.scienceNotes.forEach(note=>{b.sub(note.title);b.para(note.explanation,10);b.para(note.citation,8.5,muted);});
+ b.sub('Primary references and further reading');
+ referenceLinks.forEach(ref=>{const detail=b.lines(ref.detail,W,9);b.ensure(16+detail.length*4);b.text(ref.title,M,b.y+3.5,10,true,green);b.y+=6;b.para(ref.detail,9,muted,1);b.doc.setFont('helvetica','normal');b.doc.setFontSize(8);b.color(green);const url=clean(ref.url);b.doc.textWithLink(url,M,b.y+3,{url:ref.url});b.y+=8;});
+ return b.finish();
 }
-
-function rRect(d: jsPDF, x: number, y: number, w: number, h: number, r: number, fill: RGB, border?: RGB) {
-  fc(d, fill);
-  d.roundedRect(x, y, w, h, r, r, 'F');
-  if (border) {
-    dc(d, border);
-    d.setLineWidth(0.3);
-    d.roundedRect(x, y, w, h, r, r, 'S');
-  }
-}
-
-function hLine(d: jsPDF, x1: number, y1: number, x2: number, c: RGB, w = 0.3) {
-  dc(d, c);
-  d.setLineWidth(w);
-  d.line(x1, y1, x2, y1);
-}
-
-function footer(d: jsPDF, pg: number, total: number) {
-  const pw = d.internal.pageSize.getWidth();
-  const ph = d.internal.pageSize.getHeight();
-  hLine(d, 15, ph - 16, pw - 15, RULE, 0.2);
-  d.setFontSize(6.5);
-  d.setFont('helvetica', 'normal');
-  tc(d, LABEL);
-  d.text('GearUpToFit Body Recomp OS  |  Science-Backed Fitness Planning', 15, ph - 10);
-  tc(d, BLUE);
-  const fLinkX = 15 + d.getTextWidth('GearUpToFit Body Recomp OS  |  Science-Backed Fitness Planning') + 4;
-  d.textWithLink('gearuptofit.com', fLinkX, ph - 10, { url: 'https://gearuptofit.com' });
-  tc(d, RED);
-  d.text(`Page ${pg} of ${total}`, pw - 15, ph - 10, { align: 'right' });
-}
-
-function section(d: jsPDF, y: number, title: string): number {
-  const pw = d.internal.pageSize.getWidth();
-  fc(d, RED);
-  d.rect(15, y, 3, 7, 'F');
-  d.setFontSize(11);
-  d.setFont('helvetica', 'bold');
-  tc(d, DARK);
-  d.text(clean(title).toUpperCase(), 22, y + 5.5);
-  hLine(d, 15, y + 9, pw - 15, RULE);
-  return y + 14;
-}
-
-function needPage(d: jsPDF, y: number, need: number): number {
-  if (y + need > d.internal.pageSize.getHeight() - 22) {
-    d.addPage();
-    whiteBg(d);
-    return 20;
-  }
-  return y;
-}
-
-/* ─── Logo loader ─── */
-async function loadLogo(): Promise<string | null> {
-  try {
-    const resp = await fetch(logoUrl);
-    const blob = await resp.blob();
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(blob);
-    });
-  } catch {
-    return null;
-  }
-}
-
-/* ─── Meal plan data (shared source of truth) ─── */
-import { getSampleMeals, type MealBlock, type MealItem } from '@/lib/meal-plans';
-
-/* ═══════════════════════════════════════════════════════════
-   MAIN EXPORT
-   ═══════════════════════════════════════════════════════════ */
-export async function generatePlanPDF(plan: PlanResults, inputs: UserInputs) {
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const pw = doc.internal.pageSize.getWidth();
-  const ph = doc.internal.pageSize.getHeight();
-  const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-  const logoData = await loadLogo();
-
-  const gearLinks = [
-    { label: 'Complete Fitness Workout Guides', url: 'https://gearuptofit.com/fitness/', desc: 'Step-by-step workout routines for all levels' },
-    { label: 'Nutrition & Healthy Meal Plans', url: 'https://gearuptofit.com/nutrition/', desc: 'Evidence-based nutrition strategies and recipes' },
-    { label: 'Running Programs for All Levels', url: 'https://gearuptofit.com/running/', desc: 'From couch-to-5K to marathon training plans' },
-    { label: 'Proven Weight Loss Strategies', url: 'https://gearuptofit.com/weight-loss/', desc: 'Sustainable fat loss methods backed by science' },
-    { label: 'Health & Wellness Resources', url: 'https://gearuptofit.com/health/', desc: 'Sleep, stress management, and recovery tips' },
-  ];
-
-  /* ═══ PAGE 1: COVER ═══ */
-  whiteBg(doc);
-
-  // Top accent bar
-  fc(doc, RED);
-  doc.rect(0, 0, pw, 4, 'F');
-
-  // Logo
-  if (logoData) {
-    doc.addImage(logoData, 'PNG', pw / 2 - 15, 14, 30, 30);
-  }
-
-  const brandY = logoData ? 50 : 30;
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  tc(doc, RED);
-  doc.text('GEAR UP TO FIT', pw / 2, brandY, { align: 'center' });
-  doc.setFontSize(6.5);
-  doc.setFont('helvetica', 'normal');
-  tc(doc, LABEL);
-  doc.text('BODY RECOMP OS  |  EVIDENCE-BASED FITNESS PLANNING', pw / 2, brandY + 5, { align: 'center' });
-
-  // Title
-  const titleY = brandY + 22;
-  doc.setFontSize(26);
-  doc.setFont('helvetica', 'bold');
-  tc(doc, DARK);
-  doc.text('YOUR PERSONALIZED 8-WEEK', pw / 2, titleY, { align: 'center' });
-  doc.setFontSize(30);
-  tc(doc, RED);
-  doc.text(clean(plan.goalLabel).toUpperCase() + ' PLAN', pw / 2, titleY + 12, { align: 'center' });
-
-  // Decorative line
-  fc(doc, RED);
-  doc.rect(pw / 2 - 25, titleY + 17, 50, 0.8, 'F');
-
-  // Summary
-  doc.setFontSize(8.5);
-  doc.setFont('helvetica', 'normal');
-  tc(doc, BODY);
-  const sumLines = doc.splitTextToSize(clean(plan.quickSummary), pw - 60);
-  doc.text(sumLines, pw / 2, titleY + 25, { align: 'center' });
-
-  // Profile card
-  const pcY = titleY + 25 + sumLines.length * 4 + 6;
-  rRect(doc, 20, pcY, pw - 40, 44, 3, CARD, RULE);
-
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'bold');
-  tc(doc, RED);
-  doc.text('YOUR PROFILE', pw / 2, pcY + 8, { align: 'center' });
-
-  const profileData = [
-    ['Age', `${inputs.age} years`],
-    ['Sex', inputs.sex.charAt(0).toUpperCase() + inputs.sex.slice(1)],
-    ['Weight', `${inputs.weightKg} kg (${Math.round(inputs.weightKg * 2.205)} lbs)`],
-    ['Height', `${inputs.heightCm} cm (${Math.floor(inputs.heightCm / 2.54 / 12)}'${Math.round(inputs.heightCm / 2.54 % 12)}")`],
-    ['Body Fat', `${inputs.bodyFatPercent}%`],
-    ['LBM', `${plan.leanBodyMass} kg`],
-  ];
-
-  const colW = (pw - 60) / 3;
-  profileData.forEach((item, i) => {
-    const col = i % 3;
-    const row = Math.floor(i / 3);
-    const x = 30 + col * colW;
-    const iy = pcY + 15 + row * 14;
-    doc.setFontSize(6);
-    doc.setFont('helvetica', 'normal');
-    tc(doc, LABEL);
-    doc.text(item[0].toUpperCase(), x, iy);
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    tc(doc, DARK);
-    doc.text(item[1], x, iy + 5);
-  });
-
-  // Calorie hero box
-  const calY = pcY + 52;
-  rRect(doc, 20, calY, pw - 40, 36, 3, WHITE, RED);
-
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'bold');
-  tc(doc, RED);
-  doc.text('DAILY CALORIE TARGET', pw / 2, calY + 8, { align: 'center' });
-  doc.setFontSize(34);
-  tc(doc, DARK);
-  doc.text(`${plan.calorieTarget}`, pw / 2, calY + 24, { align: 'center' });
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  tc(doc, LABEL);
-  const defLabel = plan.deficitOrSurplus < 0 ? `${Math.abs(plan.deficitOrSurplus)} kcal deficit from TDEE` : plan.deficitOrSurplus > 0 ? `${plan.deficitOrSurplus} kcal surplus from TDEE` : 'Estimated maintenance';
-  doc.text(`kcal / day  |  ${defLabel}`, pw / 2, calY + 31, { align: 'center' });
-
-  // Macro cards
-  const macY = calY + 44;
-  const macW = (pw - 50) / 3;
-  const macros = [
-    { label: 'PROTEIN', value: `${plan.proteinGrams}g`, pct: `${plan.proteinPercent}%`, detail: `${plan.proteinPerKgLBM}g/kg estimated LBM`, color: RED },
-    { label: 'CARBS', value: `${plan.carbGrams}g`, pct: `${plan.carbPercent}%`, detail: `${Math.round(plan.carbGrams / inputs.weightKg * 10) / 10}g/kg BW`, color: BLUE },
-    { label: 'FAT', value: `${plan.fatGrams}g`, pct: `${plan.fatPercent}%`, detail: `${Math.round(plan.fatGrams / inputs.weightKg * 10) / 10}g/kg BW`, color: AMBER },
-  ];
-
-  macros.forEach((m, i) => {
-    const x = 20 + i * (macW + 5);
-    rRect(doc, x, macY, macW, 32, 3, CARD, RULE);
-    fc(doc, m.color);
-    doc.rect(x + 1, macY + 0.5, macW - 2, 2.5, 'F');
-    doc.setFontSize(6.5);
-    doc.setFont('helvetica', 'bold');
-    tc(doc, LABEL);
-    doc.text(m.label, x + macW / 2, macY + 9, { align: 'center' });
-    doc.setFontSize(16);
-    tc(doc, DARK);
-    doc.text(m.value, x + macW / 2, macY + 19, { align: 'center' });
-    doc.setFontSize(7);
-    tc(doc, m.color);
-    doc.text(m.pct, x + macW / 2, macY + 24, { align: 'center' });
-    doc.setFontSize(5.5);
-    tc(doc, LABEL);
-    doc.text(m.detail, x + macW / 2, macY + 28, { align: 'center' });
-  });
-
-  // Additional targets
-  const addY = macY + 38;
-  const addW = (pw - 50) / 4;
-  [
-    { label: 'FIBER', value: `${plan.fiberGrams}g/day` },
-    { label: 'WATER', value: `${plan.waterLiters}L/day` },
-    { label: 'TRAINING', value: `${inputs.workoutFrequency}x/week` },
-    { label: 'STEPS', value: `${inputs.stepCount.toLocaleString()}/day` },
-  ].forEach((t, i) => {
-    const x = 20 + i * (addW + 3.3);
-    doc.setFontSize(5.5);
-    doc.setFont('helvetica', 'bold');
-    tc(doc, LABEL);
-    doc.text(t.label, x + addW / 2, addY, { align: 'center' });
-    doc.setFontSize(9);
-    tc(doc, DARK);
-    doc.text(t.value, x + addW / 2, addY + 5, { align: 'center' });
-  });
-
-  // Footer info
-  doc.setFontSize(6.5);
-  doc.setFont('helvetica', 'normal');
-  tc(doc, LABEL);
-  doc.text(`Generated ${today}  |  Formulas: Mifflin-St Jeor  |  Diet: ${inputs.dietStyle}`, pw / 2, ph - 22, { align: 'center' });
-  doc.text('For informational purposes only. Consult a healthcare professional before beginning any program.', pw / 2, ph - 17, { align: 'center' });
-
-  /* ═══ PAGE 2: SCIENCE & METHODOLOGY ═══ */
-  doc.addPage();
-  whiteBg(doc);
-  let y = 20;
-  y = section(doc, y, 'The Science Behind Your Plan');
-
-  rRect(doc, 15, y, pw - 30, 20, 3, SOFT_BLUE, [200, 215, 240]);
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  tc(doc, BODY);
-  const sciIntro = 'Every number in this plan is derived from peer-reviewed research and validated equations. Below is the scientific basis for each component of your personalized program.';
-  const sciIntroLines = doc.splitTextToSize(clean(sciIntro), pw - 50);
-  doc.text(sciIntroLines, 22, y + 7);
-  y += 24;
-
-  plan.scienceNotes.forEach((note) => {
-    y = needPage(doc, y, 30);
-    fc(doc, RED);
-    doc.circle(19, y + 1.5, 1.5, 'F');
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    tc(doc, DARK);
-    doc.text(clean(note.title), 24, y + 3);
-    y += 7;
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    tc(doc, BODY);
-    const expLines = doc.splitTextToSize(clean(note.explanation), pw - 40);
-    doc.text(expLines, 22, y);
-    y += expLines.length * 3.8 + 2;
-    doc.setFontSize(6.5);
-    doc.setFont('helvetica', 'italic');
-    tc(doc, LABEL);
-    const citLines = doc.splitTextToSize(clean(note.citation), pw - 44);
-    doc.text(citLines, 24, y);
-    y += citLines.length * 3.2 + 6;
-  });
-
-  /* ═══ PAGE 3: NUTRITION DETAIL ═══ */
-  doc.addPage();
-  whiteBg(doc);
-  y = 20;
-  y = section(doc, y, 'Nutrition Breakdown');
-
-  const nutrData = [
-    ['Basal Metabolic Rate (BMR)', `${plan.bmr} kcal`],
-    ['Total Daily Energy Expenditure (TDEE)', `${plan.tdee} kcal`],
-    ['Thermic Effect of Food (TEF)', `~${plan.tef} kcal`],
-    ['Non-Exercise Activity (NEAT)', `~${plan.neat} kcal`],
-    ['Daily Calorie Target', `${plan.calorieTarget} kcal`],
-    ['Lean Body Mass', `${plan.leanBodyMass} kg`],
-    ['Protein per kg LBM', `${plan.proteinPerKgLBM} g/kg`],
-    ['Daily Fiber Target', `${plan.fiberGrams}g`],
-    ['Daily Water Target', `${plan.waterLiters}L`],
-    ['Formulas Used', 'Mifflin-St Jeor (estimate)'],
-    ['Diet Style', inputs.dietStyle.charAt(0).toUpperCase() + inputs.dietStyle.slice(1)],
-  ];
-  if (plan.weeklyCalorieRange) {
-    nutrData.push(['Recomp Cycling Range', `${plan.weeklyCalorieRange.low} - ${plan.weeklyCalorieRange.high} kcal`]);
-  }
-
-  rRect(doc, 15, y, pw - 30, nutrData.length * 9 + 8, 3, CARD, RULE);
-  y += 6;
-  nutrData.forEach(([lbl, val], i) => {
-    if (i > 0) hLine(doc, 22, y + 0.5, pw - 22, [235, 235, 240] as RGB, 0.15);
-    doc.setFontSize(8.5);
-    doc.setFont('helvetica', 'normal');
-    tc(doc, BODY);
-    doc.text(clean(lbl), 22, y + 5);
-    doc.setFont('helvetica', 'bold');
-    tc(doc, DARK);
-    doc.text(clean(val), pw - 22, y + 5, { align: 'right' });
-    y += 9;
-  });
-  y += 14;
-
-  // Macro table
-  y = needPage(doc, y, 55);
-  y = section(doc, y, 'Daily Macro Targets');
-  rRect(doc, 15, y, pw - 30, 48, 3, WHITE, RULE);
-
-  const cx = [25, 75, 112, 150];
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'bold');
-  tc(doc, LABEL);
-  doc.text('MACRO', cx[0], y + 7);
-  doc.text('GRAMS', cx[1], y + 7);
-  doc.text('CALORIES', cx[2], y + 7);
-  doc.text('% OF TOTAL', cx[3], y + 7);
-  hLine(doc, 20, y + 9, pw - 20, RULE);
-
-  const mRows = [
-    { name: 'Protein', g: plan.proteinGrams, cal: plan.proteinGrams * 4, pct: plan.proteinPercent, c: RED },
-    { name: 'Carbohydrates', g: plan.carbGrams, cal: plan.carbGrams * 4, pct: plan.carbPercent, c: BLUE },
-    { name: 'Fat', g: plan.fatGrams, cal: plan.fatGrams * 9, pct: plan.fatPercent, c: AMBER },
-  ];
-
-  let ry = y + 17;
-  mRows.forEach(r => {
-    fc(doc, r.c);
-    doc.circle(22, ry - 1, 1.5, 'F');
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    tc(doc, DARK);
-    doc.text(r.name, cx[0], ry);
-    doc.setFont('helvetica', 'normal');
-    tc(doc, BODY);
-    doc.text(`${r.g}g`, cx[1], ry);
-    doc.text(`${r.cal} kcal`, cx[2], ry);
-    tc(doc, r.c);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`${r.pct}%`, cx[3], ry);
-    ry += 10;
-  });
-
-  hLine(doc, 20, ry - 4, pw - 20, RULE);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  tc(doc, RED);
-  doc.text('TOTAL', cx[0], ry + 1);
-  tc(doc, DARK);
-  doc.text(`${plan.proteinGrams + plan.carbGrams + plan.fatGrams}g`, cx[1], ry + 1);
-  doc.text(`${plan.calorieTarget} kcal`, cx[2], ry + 1);
-  doc.text('100%', cx[3], ry + 1);
-
-  y = ry + 14;
-
-  /* ═══ MEAL TIMING ═══ */
-  y = needPage(doc, y, 60);
-  y = section(doc, y, 'Recommended Meal Timing');
-
-  plan.mealTiming.forEach((meal) => {
-    y = needPage(doc, y, 24);
-    rRect(doc, 15, y, pw - 30, 20, 2, CARD, RULE);
-    doc.setFontSize(8.5);
-    doc.setFont('helvetica', 'bold');
-    tc(doc, RED);
-    doc.text(clean(meal.meal), 22, y + 5);
-    doc.setFontSize(7);
-    tc(doc, LABEL);
-    doc.text(clean(meal.timing), 70, y + 5);
-    doc.setFontSize(7.5);
-    doc.setFont('helvetica', 'normal');
-    tc(doc, BODY);
-    doc.text(`${meal.calories} kcal  |  P: ${meal.protein}g  |  C: ${meal.carbs}g  |  F: ${meal.fat}g`, 22, y + 11);
-    doc.setFontSize(6.5);
-    doc.setFont('helvetica', 'italic');
-    tc(doc, LABEL);
-    doc.text(clean(meal.notes), 22, y + 16);
-    y += 24;
-  });
-
-  /* ═══ SAMPLE MEAL PLAN ═══ */
-  doc.addPage();
-  whiteBg(doc);
-  y = 20;
-  const dietLabel = inputs.dietStyle === 'keto' ? 'Ketogenic' : inputs.dietStyle === 'high-protein' ? 'High-Protein' : inputs.dietStyle === 'vegetarian' ? 'Vegetarian' : 'Standard Balanced';
-  y = section(doc, y, `Sample Day - ${dietLabel} Meal Plan`);
-
-  rRect(doc, 15, y, pw - 30, 16, 2, SOFT_AMBER, [230, 220, 190] as RGB);
-  doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'normal');
-  tc(doc, BODY);
-  doc.text('This is a sample day of eating based on your diet style and macro targets. Swap foods with similar macros to suit your preferences.', 22, y + 5);
-  doc.text('Portions are approximate -- use a food scale for accuracy. Adjust serving sizes to hit your exact daily targets.', 22, y + 10);
-  y += 20;
-
-  const meals = getSampleMeals(inputs);
-  let grandTotal = { calories: 0, protein: 0, carbs: 0, fat: 0 };
-
-  meals.forEach((meal) => {
-    y = needPage(doc, y, 12 + meal.items.length * 7);
-
-    // Meal header
-    rRect(doc, 15, y, pw - 30, 8, 2, RED);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    tc(doc, WHITE);
-    doc.text(clean(meal.meal).toUpperCase(), 22, y + 5.5);
-    y += 10;
-
-    // Column headers
-    doc.setFontSize(6);
-    doc.setFont('helvetica', 'bold');
-    tc(doc, LABEL);
-    doc.text('FOOD ITEM', 22, y + 3);
-    doc.text('PORTION', 90, y + 3);
-    doc.text('CAL', 120, y + 3);
-    doc.text('P', 136, y + 3);
-    doc.text('C', 148, y + 3);
-    doc.text('F', 160, y + 3);
-    hLine(doc, 20, y + 5, pw - 20, RULE, 0.2);
-    y += 8;
-
-    let mealCal = 0, mealP = 0, mealC = 0, mealF = 0;
-
-    meal.items.forEach((item, idx) => {
-      const bgColor = idx % 2 === 0 ? CARD : WHITE;
-      rRect(doc, 17, y - 2, pw - 34, 6, 0.5, bgColor);
-
-      doc.setFontSize(7.5);
-      doc.setFont('helvetica', 'normal');
-      tc(doc, DARK);
-      doc.text(clean(item.name), 22, y + 2);
-      doc.setFontSize(7);
-      tc(doc, LABEL);
-      doc.text(item.portion, 90, y + 2);
-      tc(doc, BODY);
-      doc.text(`${item.calories}`, 120, y + 2);
-      tc(doc, RED);
-      doc.text(`${item.protein}`, 136, y + 2);
-      tc(doc, BLUE);
-      doc.text(`${item.carbs}`, 148, y + 2);
-      tc(doc, AMBER);
-      doc.text(`${item.fat}`, 160, y + 2);
-
-      mealCal += item.calories;
-      mealP += item.protein;
-      mealC += item.carbs;
-      mealF += item.fat;
-      y += 6;
-    });
-
-    // Meal subtotal
-    hLine(doc, 20, y, pw - 20, RULE, 0.2);
-    y += 3;
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'bold');
-    tc(doc, DARK);
-    doc.text('Subtotal', 22, y + 2);
-    doc.text(`${mealCal}`, 120, y + 2);
-    tc(doc, RED);
-    doc.text(`${mealP}g`, 133, y + 2);
-    tc(doc, BLUE);
-    doc.text(`${mealC}g`, 145, y + 2);
-    tc(doc, AMBER);
-    doc.text(`${mealF}g`, 157, y + 2);
-    y += 8;
-
-    grandTotal.calories += mealCal;
-    grandTotal.protein += mealP;
-    grandTotal.carbs += mealC;
-    grandTotal.fat += mealF;
-  });
-
-  // Grand total vs target
-  y += 4;
-  y = needPage(doc, y, 28);
-  rRect(doc, 15, y, pw - 30, 24, 3, WHITE, RED);
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'bold');
-  tc(doc, RED);
-  doc.text('DAILY TOTAL vs TARGET', pw / 2, y + 5, { align: 'center' });
-
-  const compX = [40, 80, 115, 145];
-  const compLabels = ['', 'CALORIES', 'PROTEIN', 'CARBS', 'FAT'];
-  doc.setFontSize(6);
-  tc(doc, LABEL);
-  compLabels.slice(1).forEach((l, i) => doc.text(l, compX[i], y + 10));
-
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
-  tc(doc, DARK);
-  doc.text('Meal Plan', 20, y + 16);
-  doc.text(`~${grandTotal.calories}`, compX[0], y + 16);
-  tc(doc, RED); doc.text(`${grandTotal.protein}g`, compX[1], y + 16);
-  tc(doc, BLUE); doc.text(`${grandTotal.carbs}g`, compX[2], y + 16);
-  tc(doc, AMBER); doc.text(`${grandTotal.fat}g`, compX[3], y + 16);
-
-  tc(doc, LABEL);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Target', 20, y + 21);
-  tc(doc, DARK); doc.text(`${plan.calorieTarget}`, compX[0], y + 21);
-  tc(doc, RED); doc.text(`${plan.proteinGrams}g`, compX[1], y + 21);
-  tc(doc, BLUE); doc.text(`${plan.carbGrams}g`, compX[2], y + 21);
-  tc(doc, AMBER); doc.text(`${plan.fatGrams}g`, compX[3], y + 21);
-
-  y += 30;
-
-  /* ═══ TRAINING PLAN ═══ */
-  doc.addPage();
-  whiteBg(doc);
-  y = 20;
-  y = section(doc, y, '8-Week Periodized Training Program');
-
-  // RPE guide
-  rRect(doc, 15, y, pw - 30, 22, 2, SOFT_GREEN, [200, 230, 210] as RGB);
-  doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'bold');
-  tc(doc, GREEN);
-  doc.text('RPE (Rate of Perceived Exertion) Guide', 22, y + 5);
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'normal');
-  tc(doc, BODY);
-  doc.text('RPE 6-7: Could do 3-4 more reps  |  RPE 7-8: Could do 2-3 more reps  |  RPE 8-9: Could do 1-2 more reps  |  RPE 10: Not required', 22, y + 11);
-  doc.text('Rest between sets: Compounds 2-3 min  |  Isolations 60-90s  |  Core/Abs 45-60s', 22, y + 16);
-  y += 28;
-
-  plan.trainingPlan.forEach((week) => {
-    y = needPage(doc, y, 20);
-
-    const weekLabel = clean(`${week.weekRange} -- ${week.phase}`);
-    if (week.deload) {
-      rRect(doc, 15, y, pw - 30, 14, 2, [255, 248, 230] as RGB, [220, 195, 130] as RGB);
-      tc(doc, [160, 120, 20] as RGB);
-    } else {
-      rRect(doc, 15, y, pw - 30, 14, 2, RED);
-      tc(doc, WHITE);
-    }
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    doc.text(weekLabel, 20, y + 5.5);
-
-    if (week.intensityGuideline) {
-      doc.setFontSize(6);
-      doc.setFont('helvetica', 'normal');
-      if (week.deload) tc(doc, [160, 120, 20] as RGB); else tc(doc, [255, 200, 200] as RGB);
-      doc.text(clean(week.intensityGuideline), 20, y + 10.5);
-    }
-    y += 18;
-
-    week.days.forEach(day => {
-      y = needPage(doc, y, 10 + day.exercises.length * 7);
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      tc(doc, RED);
-      doc.text(clean(`${day.day} -- ${day.focus}`), 20, y);
-      y += 5;
-
-      doc.setFontSize(6);
-      doc.setFont('helvetica', 'bold');
-      tc(doc, LABEL);
-      doc.text('EXERCISE', 25, y);
-      doc.text('SETS x REPS', pw - 65, y);
-      doc.text('RPE', pw - 35, y);
-      doc.text('REST', pw - 22, y, { align: 'right' });
-      y += 4;
-
-      day.exercises.forEach(ex => {
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'normal');
-        tc(doc, BODY);
-        fc(doc, LABEL);
-        doc.circle(22, y - 0.8, 0.6, 'F');
-        doc.text(clean(ex.name), 25, y);
-        doc.setFont('helvetica', 'bold');
-        tc(doc, DARK);
-        doc.text(`${ex.sets} x ${clean(ex.reps)}`, pw - 65, y);
-        if (ex.rpe) { doc.setFont('helvetica', 'normal'); tc(doc, RED); doc.text(ex.rpe, pw - 35, y); }
-        if (ex.rest) { doc.setFont('helvetica', 'normal'); tc(doc, LABEL); doc.text(clean(ex.rest), pw - 22, y, { align: 'right' }); }
-        if (ex.notes) {
-          doc.setFontSize(6.5);
-          doc.setFont('helvetica', 'italic');
-          tc(doc, LABEL);
-          doc.text(clean(ex.notes), 28, y + 4);
-          y += 4;
-        }
-        y += 5.5;
-      });
-      y += 2;
-    });
-    hLine(doc, 20, y, pw - 20, RULE);
-    y += 5;
-  });
-
-  /* ═══ CARDIO & HEART RATE ZONES ═══ */
-  y = needPage(doc, y, 70);
-  if (y < 25) y = 20;
-  y = section(doc, y, 'Cardio Plan');
-
-  const cardioInfo = [
-    ['Type', clean(plan.cardioPlan.type)],
-    ['Sessions / Week', `${plan.cardioPlan.sessionsPerWeek}x`],
-    ['Duration', clean(plan.cardioPlan.duration)],
-    ['Intensity', clean(plan.cardioPlan.intensity)],
-  ];
-  rRect(doc, 15, y, pw - 30, cardioInfo.length * 9 + 8, 3, CARD, RULE);
-  y += 6;
-  cardioInfo.forEach(([lbl, val]) => {
-    doc.setFontSize(8.5);
-    doc.setFont('helvetica', 'normal');
-    tc(doc, BODY);
-    doc.text(lbl, 22, y + 4);
-    doc.setFont('helvetica', 'bold');
-    tc(doc, DARK);
-    doc.text(val, pw - 22, y + 4, { align: 'right' });
-    y += 9;
-  });
-
-  if (plan.cardioPlan.runningPlan) {
-    y += 4;
-    const rpText = clean(plan.cardioPlan.runningPlan);
-    const rpLines = doc.splitTextToSize(rpText, pw - 50);
-    rRect(doc, 15, y, pw - 30, 8 + rpLines.length * 4, 2, SOFT_RED, [240, 200, 200] as RGB);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    tc(doc, RED);
-    doc.text('Running Program', 22, y + 5);
-    doc.setFont('helvetica', 'normal');
-    tc(doc, BODY);
-    doc.text(rpLines, 22, y + 10);
-    y += 14 + rpLines.length * 4;
-  }
-
-  // Heart Rate Zones
-  if (plan.cardioPlan.heartRateZones) {
-    y += 8;
-    y = needPage(doc, y, 50);
-    y = section(doc, y, 'Heart Rate Training Zones (Karvonen Formula)');
-    
-    rRect(doc, 15, y, pw - 30, plan.cardioPlan.heartRateZones.length * 9 + 10, 3, CARD, RULE);
-    y += 6;
-    doc.setFontSize(6.5);
-    doc.setFont('helvetica', 'bold');
-    tc(doc, LABEL);
-    doc.text('ZONE', 22, y + 3);
-    doc.text('HEART RATE', 80, y + 3);
-    doc.text('PURPOSE', 120, y + 3);
-    hLine(doc, 20, y + 5, pw - 20, RULE);
-    y += 8;
-    
-    plan.cardioPlan.heartRateZones.forEach((z) => {
-      doc.setFontSize(7.5);
-      doc.setFont('helvetica', 'bold');
-      tc(doc, DARK);
-      doc.text(clean(z.zone), 22, y + 3);
-      doc.setFont('helvetica', 'normal');
-      tc(doc, RED);
-      doc.text(clean(z.bpm), 80, y + 3);
-      tc(doc, BODY);
-      doc.text(clean(z.purpose), 120, y + 3);
-      y += 9;
-    });
-    y += 4;
-  }
-
-  y += 10;
-
-  // Recovery checklist
-  y = needPage(doc, y, 20 + plan.recoveryChecklist.length * 9);
-  y = section(doc, y, 'Daily Recovery Checklist');
-
-  const ckH = plan.recoveryChecklist.length * 9 + 8;
-  rRect(doc, 15, y, pw - 30, ckH, 3, CARD, RULE);
-  y += 7;
-
-  plan.recoveryChecklist.forEach(item => {
-    y = needPage(doc, y, 10);
-    dc(doc, RED);
-    doc.setLineWidth(0.4);
-    doc.roundedRect(22, y - 2.5, 3.5, 3.5, 0.5, 0.5, 'S');
-    doc.setFontSize(8.5);
-    doc.setFont('helvetica', 'normal');
-    tc(doc, BODY);
-    const cleanItem = clean(item);
-    const itemLines = doc.splitTextToSize(cleanItem, pw - 60);
-    doc.text(itemLines, 29, y);
-    y += Math.max(8, itemLines.length * 4 + 4);
-  });
-
-  /* ═══ 8-WEEK HABIT PLAN ═══ */
-  y += 8;
-  y = needPage(doc, y, 60);
-  y = section(doc, y, '8-Week Habit Building Plan');
-
-  plan.habitPlan.forEach((week) => {
-    y = needPage(doc, y, 22);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    tc(doc, RED);
-    doc.text(`Week ${week.week}: ${clean(week.focus)}`, 22, y + 3);
-    y += 6;
-    week.habits.forEach(h => {
-      doc.setFontSize(7.5);
-      doc.setFont('helvetica', 'normal');
-      tc(doc, BODY);
-      fc(doc, LABEL);
-      doc.circle(24, y + 0.2, 0.6, 'F');
-      doc.text(clean(h), 28, y + 1);
-      y += 5;
-    });
-    y += 3;
-  });
-
-  /* ═══ RECOMMENDED RESOURCES FROM GEARUPTOFIT ═══ */
-  doc.addPage();
-  whiteBg(doc);
-  y = 20;
-  y = section(doc, y, 'Recommended Resources from GearUpToFit');
-
-  // Logo + intro
-  if (logoData) {
-    doc.addImage(logoData, 'PNG', pw / 2 - 12, y, 24, 24);
-    y += 28;
-  }
-
-  rRect(doc, 15, y, pw - 30, 14, 2, SOFT_RED, [240, 210, 210] as RGB);
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  tc(doc, BODY);
-  doc.text('Explore these hand-picked resources from GearUpToFit.com to support your transformation journey.', 22, y + 5);
-  doc.text('Click any link below to access expert articles, guides, and programs.', 22, y + 10);
-  y += 18;
-
-  gearLinks.forEach((link) => {
-    y = needPage(doc, y, 20);
-    rRect(doc, 15, y, pw - 30, 16, 2, CARD, RULE);
-    fc(doc, RED);
-    doc.circle(22, y + 5, 1.5, 'F');
-
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    tc(doc, DARK);
-    doc.text(clean(link.label), 27, y + 5);
-
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'normal');
-    tc(doc, LABEL);
-    doc.text(clean(link.desc), 27, y + 10);
-
-    doc.setFontSize(7.5);
-    tc(doc, BLUE);
-    doc.textWithLink(link.url, 27, y + 14, { url: link.url });
-    y += 20;
-  });
-
-  /* ═══ PROGRESS TRACKER ═══ */
-  y += 6;
-  y = needPage(doc, y, 70);
-  y = section(doc, y, 'Weekly Progress Tracker');
-
-  rRect(doc, 15, y, pw - 30, 52, 3, CARD, RULE);
-  const weeks = ['Week 1-2', 'Week 3-4', 'Week 5-6', 'Week 7-8'];
-  const trackCols = ['WEIGHT', 'WAIST', 'ENERGY', 'NOTES'];
-
-  doc.setFontSize(6.5);
-  doc.setFont('helvetica', 'bold');
-  tc(doc, LABEL);
-  const tColW = (pw - 70) / 4;
-  doc.text('PERIOD', 22, y + 7);
-  trackCols.forEach((c, i) => {
-    doc.text(c, 55 + i * tColW, y + 7);
-  });
-  hLine(doc, 20, y + 9, pw - 20, RULE);
-
-  weeks.forEach((w, i) => {
-    const rowY = y + 16 + i * 10;
-    if (i > 0) hLine(doc, 20, rowY - 3, pw - 20, [235, 235, 240] as RGB, 0.15);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    tc(doc, DARK);
-    doc.text(w, 22, rowY);
-    trackCols.forEach((_, ci) => {
-      dc(doc, [210, 210, 215] as RGB);
-      doc.setLineWidth(0.15);
-      doc.line(55 + ci * tColW, rowY + 1, 55 + ci * tColW + tColW - 8, rowY + 1);
-    });
-  });
-
-  y += 60;
-
-  // Notes
-  y = needPage(doc, y, 55);
-  y = section(doc, y, 'Personal Notes');
-  rRect(doc, 15, y, pw - 30, 48, 3, CARD, RULE);
-  for (let i = 0; i < 5; i++) {
-    hLine(doc, 22, y + 9 + i * 8, pw - 22, [230, 230, 235] as RGB, 0.15);
-  }
-
-  /* ═══ REFERENCES ═══ */
-  y += 58;
-  y = needPage(doc, y, 60);
-  y = section(doc, y, 'Scientific References');
-
-  const references = [
-    'Mifflin MD et al. A new predictive equation for resting energy expenditure. Am J Clin Nutr. 1990;51(2):241-7.',
-    'Katch VL, McArdle WD. Introduction to Nutrition, Exercise, and Health. 4th ed. 1996.',
-    'Morton RW et al. A systematic review of protein supplements and resistance training. Br J Sports Med. 2018;52(6):376-384.',
-    'Helms ER et al. Evidence-based recommendations for natural bodybuilding. J Int Soc Sports Nutr. 2014;11:20.',
-    'Levine JA. Measurement of energy expenditure. Public Health Nutr. 2005;8(7A):1123-32.',
-    'Schoenfeld BJ. The mechanisms of muscle hypertrophy. J Strength Cond Res. 2010;24(10):2857-72.',
-    'Walker M. Why We Sleep: Unlocking the Power of Sleep and Dreams. Scribner, 2017.',
-    'Barakat C et al. Body recomposition: Can trained individuals build muscle and lose fat at the same time? Strength Cond J. 2020;42(5):7-21.',
-  ];
-
-  rRect(doc, 15, y, pw - 30, references.length * 6 + 8, 3, CARD, RULE);
-  y += 6;
-  references.forEach((ref, i) => {
-    doc.setFontSize(6);
-    doc.setFont('helvetica', 'normal');
-    tc(doc, BODY);
-    doc.text(`[${i + 1}] ${clean(ref)}`, 22, y + 3);
-    y += 6;
-  });
-
-  /* ═══ FINAL BRANDING ═══ */
-  y += 10;
-  y = needPage(doc, y, 45);
-
-  rRect(doc, 25, y, pw - 50, 38, 4, CARD, RULE);
-
-  if (logoData) {
-    doc.addImage(logoData, 'PNG', pw / 2 - 8, y + 3, 16, 16);
-  }
-
-  const bTextY = logoData ? y + 22 : y + 10;
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  tc(doc, RED);
-  doc.text('GEAR UP TO FIT', pw / 2, bTextY, { align: 'center' });
-  doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'normal');
-  tc(doc, BODY);
-  doc.text('Your evidence-based fitness companion', pw / 2, bTextY + 5, { align: 'center' });
-  tc(doc, BLUE);
-  doc.setFont('helvetica', 'bold');
-  const siteUrl = 'https://gearuptofit.com';
-  const siteW = doc.getTextWidth(siteUrl);
-  doc.textWithLink(siteUrl, pw / 2 - siteW / 2, bTextY + 11, { url: siteUrl });
-
-  /* ═══ Page numbering ═══ */
-  const total = doc.getNumberOfPages();
-  for (let i = 1; i <= total; i++) {
-    doc.setPage(i);
-    footer(doc, i, total);
-  }
-
-  doc.save(`GearUpToFit-${clean(plan.goalLabel).replace(/\s+/g, '-')}-Plan-${inputs.weightKg}kg.pdf`);
-}
+export async function generatePlanPDF(plan:PlanResults,inputs:UserInputs){const doc=buildPlanPDF(plan,inputs);doc.save('GearUpToFit-8-Week-'+clean(plan.goalLabel).replace(/\s+/g,'-')+'-Workbook.pdf');}
