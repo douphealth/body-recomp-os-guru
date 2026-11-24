@@ -7,7 +7,7 @@ import Footer from '@/components/Footer';
 import SEOHead from '@/components/SEOHead';
 import JsonLd from '@/components/JsonLd';
 import { trackCTAClick, trackInternalLinkClick } from '@/lib/tracking';
-import heroImg from '@/assets/hero-gym.jpg';
+import FitnessHomeHero from '@/components/FitnessHomeHero';
 import nutritionImg from '@/assets/nutrition-hero.jpg';
 import cardioImg from '@/assets/cardio-hero.jpg';
 
@@ -28,15 +28,8 @@ const features = [
   { icon: Brain, label: 'Habit System', desc: 'Week-by-week behavior stacking', gradient: 'from-purple-500/20 to-indigo-500/10' },
 ];
 
-const stats = [
-  { value: '2 min', label: 'To Build Your Plan' },
-  { value: 'Free', label: 'No subscription needed' },
-  { value: '8 wk', label: 'Periodized Program' },
-  { value: '5+', label: 'Plan Components' },
-];
-
 const planIncludes = [
-  { text: 'Personalized daily calorie target based on your body composition', icon: Flame },
+  { text: 'Estimated daily energy target based on your profile', icon: Flame },
   { text: 'Practical protein and macro targets based on body weight and energy budget', icon: Target },
   { text: 'Custom training split for your equipment and schedule', icon: Dumbbell },
   { text: 'Progressive 8-week periodization with deload phases', icon: TrendingUp },
@@ -80,8 +73,8 @@ const Index = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <SEOHead
-        title="Body Recomp OS — Free 8-Week Fitness Planner | GearUpToFit"
-        description="Get your personalized calorie targets, macro split, 8-week training plan, cardio guidance, and recovery checklist — all in one free tool from GearUpToFit."
+        title="Free Personal Fitness Plan & Workout Tracker | GearUpToFit"
+        description="Build a free 8-week fitness plan for your goal, equipment and schedule. Follow workouts, log sets, track recovery and get practical nutrition targets."
         path="/"
       />
       <JsonLd data={webAppSchema} />
@@ -90,96 +83,7 @@ const Index = () => {
       <Header />
 
       <main className="flex-1">
-        {/* Hero */}
-        <section className="relative min-h-[90vh] md:min-h-[85vh] flex items-center overflow-hidden">
-          {/* Background image */}
-          <div className="absolute inset-0">
-            <img src={heroImg} alt="" className="w-full h-full object-cover" width={1920} height={1080} />
-            <div className="absolute inset-0 bg-gradient-to-r from-background via-background/90 to-background/60" />
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/40" />
-          </div>
-
-          <div className="container relative z-10 py-16 md:py-24">
-            <div className="max-w-2xl">
-              <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
-                className="inline-flex items-center gap-2 mb-6 px-4 py-2 rounded-full glass glass-border"
-              >
-                <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                <span className="text-xs font-semibold text-primary uppercase tracking-wider">Free • No Credit Card • Instant Results</span>
-              </motion.div>
-
-              <motion.h1
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.1 }}
-                className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.05] mb-6"
-              >
-                BUILD YOUR<br />
-                <span className="text-primary text-glow">8-WEEK FITNESS</span><br />
-                <span className="text-primary text-glow">PLAN</span>
-              </motion.h1>
-
-              <motion.p
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-                className="text-base sm:text-lg text-muted-foreground mb-8 leading-relaxed max-w-lg"
-              >
-                Get your calories, macros, workouts, cardio, recovery, and habit plan — personalized to your body, goals, and equipment in under 3 minutes.
-              </motion.p>
-
-              <motion.div
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.3 }}
-                className="flex flex-col sm:flex-row gap-4"
-              >
-                <Link to="/build-my-plan" onClick={() => trackCTAClick('hero_cta', 'homepage')}>
-                  <Button size="lg" className="gradient-red border-0 text-base sm:text-lg px-8 sm:px-10 py-6 font-bold tracking-wide shadow-lg shadow-primary/25 hover:shadow-primary/50 transition-all duration-300 hover:scale-[1.02] w-full sm:w-auto">
-                    Build My Plan <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </Link>
-                <a href="#features" className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors py-3">
-                  See what's included ↓
-                </a>
-              </motion.div>
-            </div>
-          </div>
-
-          {/* Floating stat pills */}
-          <div className="hidden lg:block absolute right-[8%] top-1/2 -translate-y-1/2 space-y-4">
-            {stats.map((stat, i) => (
-              <motion.div
-                key={stat.label}
-                initial={{ opacity: 0, x: 24 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.5 + i * 0.1, duration: 0.4 }}
-                className="glass glass-border rounded-xl px-5 py-3 text-center min-w-[140px]"
-                style={{ animation: `float 4s ease-in-out infinite`, animationDelay: `${i * 0.5}s` }}
-              >
-                <p className="text-2xl font-bold text-primary font-['Oswald']">{stat.value}</p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">{stat.label}</p>
-              </motion.div>
-            ))}
-          </div>
-        </section>
-
-        {/* Mobile Stats */}
-        <section className="lg:hidden py-8 border-b border-border">
-          <div className="container">
-            <div className="grid grid-cols-4 gap-3">
-              {stats.map((stat) => (
-                <div key={stat.label} className="text-center">
-                  <p className="text-xl font-bold text-primary font-['Oswald']">{stat.value}</p>
-                  <p className="text-[9px] text-muted-foreground uppercase tracking-wider mt-0.5">{stat.label}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+        <FitnessHomeHero />
 
         {/* Features */}
         <section id="features" className="py-20 md:py-28">
